@@ -1,0 +1,157 @@
+
+
+from rest_framework import generics, permissions, viewsets, ser
+class VetRequestCreateView(generics.CreateAPIView):
+    queryset = VetRequest.objects.all()
+    serializer_class = VetRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        location_data = self.request.data.get('location')
+        
+        if location_data:
+            latitude = location_data.get('latitude')
+            longitude = location_data.get('longitude')
+
+            if latitude is not None and longitude is not None:
+                # Create a Point object using the latitude and longitude
+                location = Point(longitude, latitude, srid=4326)
+                # Save the VetRequest with location and farmer data
+                serializer.save(farmer=self.request.user, location=location)
+            else:
+                raise serializers.ValidationError({"location": "Both latitude and longitude must be provided."})
+        else:
+            raise serializers.ValidationError({"location": "Location data is required."})
+
+
+# List VetRequests (farmers can list their own requests)
+class VetRequestListView(generics.ListAPIView):
+    serializer_class = VetRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Farmers can only see their own requests
+        return VetRequest.objects.filter(farmer=self.request.user)
+
+
+# View details of a single VetRequest (both farmers and veterinarians)
+class VetRequestDetailView(generics.RetrieveUpdateAPIView):
+    queryset = VetRequest.objects.all()
+    serializer_class = VetRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_veterinarian:
+            return VetRequest.objects.all()
+        return VetRequest.objects.filter(farmer=user)
+
+
+# Accept a VetRequest (vets can accept requests)
+class VetRequestAcceptView(generics.UpdateAPIView):
+    queryset = VetRequest.objects.all()
+    serializer_class = VetRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def update(self, request, *args, **kwargs):
+        vet_request = self.get_object()
+        vet_request.status = 'accepted'  # Mark the request as accepted
+        vet_request.veterinarian = request.user  # Assign the vet (logged-in user)
+        vet_request.save()
+
+        # Create a notification for the farmer
+        Notification.objects.create(
+            farmer=vet_request.farmer,
+            vet_request=vet_request,
+            message=f"Your request for {vet_request.animal.name} has been accepted by the vet."
+        )
+
+        return Response(self.get_serializer(vet_request).data, status=status.HTTP_200_OK)
+
+
+# Reject a VetRequest (vets can reject requests)
+class VetRequestRejectView(generics.UpdateAPIView):
+    queryset = VetRequest.objects.all()
+    serializer_class = VetRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def update(self, request, *args, **kwargs):
+        vet_request = self.get_object()
+        vet_request.status = 'rejected'  # Mark the request as rejected
+        vet_request.veterinarian = request.user  # Assign the vet (logged-in user)
+        vet_request.save()
+
+        # Create a notification for the farmer
+        Notification.objects.create(
+            farmer=vet_request.farmer,
+            vet_request=vet_request,
+            message=f"Your request for {vet_request.animal.name} has been rejected by the vet."
+        )
+
+        return Response(self.get_serializer(vet_request).data, status=status.HTTP_200_OK)
+
+
+# List completed VetRequests (for both farmers and vets)
+class VetRequestCompletedListView(generics.ListAPIView):
+    serializer_class = VetRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_veterinarian:
+            return VetRequest.objects.filter(status='completed')  # Vet can see all completed requests
+        return VetRequest.objects.filter(farmer=user, status='completed')  # Farmer can see their own completed requests
+
+
+# List pending VetRequests (for both farmers and vets)
+class VetRequestPendingListView(generics.ListAPIView):
+    serializer_class = VetRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_veterinarian:
+            return VetRequest.objects.filter(status='pending')  # Vet can see all pending requests
+        return VetRequest.objects.filter(farmer=user, status='pending')  # Farmer can see their own pending requests
+
+
+# ViewSet to handle scheduling visits and vet request CRUD operations
+class VetRequestViewSet(viewsets.ModelViewSet):
+    queryset = VetRequest.objects.all()
+    serializer_class = VetRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    # Custom action to schedule a visit
+    @action(detail=True, methods=['post'], url_path='schedule_visit')
+    def schedule_visit(self, request, pk=None):
+        try:
+            vet_request = self.get_object()  # Get the request by ID
+            serializer = ScheduleVisitSerializer(vet_request, data=request.data, partial=True)
+
+            if serializer.is_valid():
+                serializer.save()
+
+                # Create a notification when scheduling a visit
+                Notification.objects.create(
+                    farmer=vet_request.farmer,
+                    vet_request=vet_request,
+                    message=f"A visit has been scheduled for {vet_request.animal.name}."
+                )
+
+                return Response(serializer.data, status=status.HTTP_200_OK)
+
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except VetRequest.DoesNotExist:
+            return Response({'error': 'Vet request not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+# List of notifications for the logged-in user (farmers and vets)
+class NotificationListView(generics.ListAPIView):
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Return notifications based on the requesting user (farmer or vet)
+        return Notification.objects.filter(farmer=self.request.user)  # Can be extended to also include vet notifications if needed
+
+
