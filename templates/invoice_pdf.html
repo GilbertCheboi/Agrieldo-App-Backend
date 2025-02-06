@@ -1,0 +1,53 @@
+{% load custom_filters %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Invoice #{{ invoice.id }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #ffa500; color: white; }
+        .total-row { font-weight: bold; background-color: #333333; color: white; }
+    </style>
+</head>
+<body>
+
+    <h2>Agrieldo Farm Management Solutions</h2>
+    <p>Invoice #{{ invoice.id }}</p>
+    <p>Customer: {{ invoice.customer_name }}</p>
+    <p>Due Date: {{ invoice.due_date }}</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.description }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>Ksh.{{ item.unit_price }}</td>
+                <td>Ksh.{{ item.total_price }}</td>  <!-- Correct total display -->
+
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+                <td colspan="3">Grand Total</td>
+		<td><strong>Ksh.{{ grand_total }}</strong></td>
+
+            </tr>
+        </tbody>
+    </table>
+
+    <p>Thank you for your business!</p>
+    <p>Best Regards,<br>Agrieldo Team</p>
+
+</body>
+</html>
+

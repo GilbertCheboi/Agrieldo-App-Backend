@@ -1,4 +1,5 @@
 # vet_requests/views.py
+from django.contrib.gis.geos import Point
 
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -7,6 +8,37 @@ from rest_framework.response import Response
 from profiles.models import Farmer, Vet
 from .models import VetRequest
 from .utils import find_closest_vet, send_notification
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+
+from .serializers import VetRequestSerializer
+
+class VetRequestCreateView(APIView):
+    def post(self, request, *args, **kwargs):
+        farmer_id = request.user.id  # Assuming the user is authenticated
+
+        # Ensure description is in the request data
+        description = request.data.get('description')
+        if not description:
+            return Response({'error': 'Description is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        service_type = request.data.get('serviceType')
+        if not service_type:
+            return Response({'error': 'Service Type is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Add farmer_id to the request data
+        request.data['farmer'] = farmer_id
+
+        serializer = VetRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            vet_request = serializer.save()
+            return Response({
+                'message': 'Vet request successful.',
+                'vet_id': vet_request.id,
+                'status': vet_request.status
+            }, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])

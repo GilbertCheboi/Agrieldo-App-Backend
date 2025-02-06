@@ -34,6 +34,12 @@ urlpatterns = [
     path('api/profiles/', include('profiles.urls')),  # Include profile URLs
     path('api/production/', include('production.urls')),  # Include profile URLs
     path('api/camera/', include('camera.urls')),  # Include profile URLs
+    path('api/Subscriber/', include('Subscriber.urls')),  # Include profile URLs
+    path('api/merchandise/', include('merchandise.urls')),  # Include merchandise app URLs
+    path('api/feed_store/', include('feed_store.urls')),  # Include feed_store app URLs
+    path('api/drug_store/', include('drug_store.urls')),  # Include drug_store app URLs
+    path('api/calendar/', include('calendar_app.urls')),  # Include calendar_app app URLs
+
 
 
 

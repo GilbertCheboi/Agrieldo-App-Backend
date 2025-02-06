@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import NVR, Stream, JanusStream
+from .models import NVR, Stream, JanusStream, Video
 
 User = get_user_model()
 
@@ -47,4 +47,10 @@ class JanusStreamSerializer(serializers.ModelSerializer):
         model = JanusStream
         fields = [
             'id', 'stream', 'janus_room_id', 'janus_server_url'
-        ]
+
+            ]
+
+class VideoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Video
+        fields = ['id', 'title', 'description', 'file', 'uploaded_at', 'duration', 'views']

@@ -3,7 +3,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
-from profiles.models import Farmer, Vet  # Import the profile models
+from profiles.models import Farmer, Vet, Staff  # Import the profile models
 from .serializers import UserRegistrationSerializer
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -20,8 +20,6 @@ import re
 
 
 
-cred = credentials.Certificate('/home/gilly/Farmers/Backend/agrieldo-bc336-firebase-adminsdk-yn7kr-c9c2246eef.json')  # Path to your Firebase credentials
-firebase_admin.initialize_app(cred)
 
 
 
@@ -49,6 +47,10 @@ class UserRegistrationView(generics.CreateAPIView):
         if user_type == "1":  # Farmer
             Farmer.objects.create(user=user, phone_number=request.data.get('phone_number', ''))
             print("Farmer profile created")  # Debugging line
+        elif user_type == "3":  # Farmer
+            Staff.objects.create(user=user, phone_number=request.data.get('phone_number', ''))
+            print("Staff profile created")  # Debugging line
+
 
         elif user_type == "2":  # Vet
             Vet.objects.create(
@@ -78,6 +80,9 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 user_type = 'farmer'
             elif hasattr(user, 'vet_profile'):
                 user_type = 'vet'
+            elif hasattr(user, 'staff_profile'):
+                user_type = 'staff'
+
             else:
                 user_type = 'unknown'
             user_id = user.id  # Get user ID directly from the user instance

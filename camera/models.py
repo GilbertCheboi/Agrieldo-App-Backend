@@ -47,3 +47,19 @@ class JanusStream(models.Model):
 
     def __str__(self):
         return f"Janus Stream {self.janus_room_id} ({self.stream.camera_name})"
+
+
+
+from django.db import models
+
+class Video(models.Model):
+    title = models.CharField(max_length=255)  # Title of the video
+    description = models.TextField(blank=True, null=True)  # Optional description
+    file = models.FileField(upload_to='videos/')  # File path in the media directory
+    uploaded_at = models.DateTimeField(auto_now_add=True)  # Timestamp for upload
+    duration = models.PositiveIntegerField(blank=True, null=True)  # Optional, in seconds
+    views = models.PositiveIntegerField(default=0)  # Track number of views
+
+    def __str__(self):
+        return self.title
+

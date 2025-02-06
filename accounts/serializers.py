@@ -23,10 +23,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             return User.FARMER
         elif value == 'Vet':
             return User.VET
-        elif value in [User.FARMER, User.VET]:  # Allow integers directly
+        elif value == 'Staff':
+            return User.STAFF  # Handle 'Staff' as well
+        elif value in [User.FARMER, User.VET, User.STAFF]:  # Allow integers directly
             return value
         else:
             raise serializers.ValidationError("Invalid user type.")
+
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():

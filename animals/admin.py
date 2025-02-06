@@ -4,8 +4,8 @@ from .models import Animal, Dairy_Cow, Beef_Cow, Sheep, Goat, DairyMedicalRecord
 # Register the Animal model and its subclasses
 @admin.register(Animal)
 class AnimalAdmin(admin.ModelAdmin):
-    list_display = ('name', 'species', 'age', 'gender', 'owner')
-    search_fields = ('name', 'species')
+    list_display = ('name', 'species', 'age','tag', 'is_for_sale', 'price', 'gender', 'owner')
+    search_fields = ('name', 'species', 'tag')
     list_filter = ('species', 'gender', 'image')
 
 @admin.register(Dairy_Cow)

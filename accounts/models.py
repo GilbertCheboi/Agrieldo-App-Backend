@@ -3,13 +3,17 @@ from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 
+
+
 class User(AbstractUser):
     FARMER = 1
     VET = 2
+    STAFF = 3
 
     USER_TYPE_CHOICES = (
         (FARMER, 'Farmer'),
         (VET, 'Vet'),
+        (STAFF, 'Staff'),
     )
 
     user_type = models.PositiveSmallIntegerField(choices=USER_TYPE_CHOICES, default=FARMER)  # Default to Farmer
@@ -24,6 +28,8 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.get_user_type_display()})"
+
+
 
 # Password reset token model
 class PasswordResetToken(models.Model):

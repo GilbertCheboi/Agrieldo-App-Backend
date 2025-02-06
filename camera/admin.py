@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import NVR, Stream, JanusStream
+from .models import NVR, Stream, JanusStream, Video
 
 @admin.register(NVR)
 class NVRAdmin(admin.ModelAdmin):
@@ -43,3 +43,8 @@ class JanusStreamAdmin(admin.ModelAdmin):
             'fields': ('stream', 'janus_room_id', 'janus_server_url')
         }),
     )
+
+@admin.register(Video)
+class VideoAdmin(admin.ModelAdmin):
+    list_display = ('title', 'uploaded_at', 'views')
+    search_fields = ('title',)

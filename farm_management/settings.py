@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
-
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-_+dv1ec81!^iuyp&n&u77xs@qi*c37kttjf4j*-@0fhoc*)l55
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['104.248.23.245', "127.0.0.1", '192.168.100.4']
+ALLOWED_HOSTS = ['207.154.253.97',"api.agrieldo.com",  "127.0.0.1", '192.168.100.4']
 
 
 # Application definition
@@ -46,7 +46,9 @@ INSTALLED_APPS = [
     'accounts',
     'billing',
     'messaging',
+    'merchandise',
     'market',
+    'Subscriber',
     'store',
     'education',
     'contracts',
@@ -58,9 +60,13 @@ INSTALLED_APPS = [
     'profiles',
     'production',
     'camera',
-    
+    'feed_store',
+    'drug_store',
+    'calendar_app',
     'rest_framework_gis',
     'channels',
+    'django_celery_beat',  # Add this to your installed apps
+
     'fcm_django',
     'django_extensions',
     'rest_framework',
@@ -78,6 +84,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware', 
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+
 
 ]
 
@@ -92,7 +100,8 @@ ROOT_URLCONF = 'farm_management.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],  # Add your template path here
+        
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -122,6 +131,7 @@ CHANNEL_LAYERS = {
 #sudo apt update
 #sudo apt install redis-server
 
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 FCM_DJANGO_SETTINGS = {
     "FCM_SERVER_KEY": "AIzaSyAUsPLSOA9ndp9LC4XYnVgN6Y9ykqGz22Q",  # Replace with your FCM server key from Firebase
@@ -152,7 +162,19 @@ CORS_ALLOWED_ORIGINS = [
 
     "http://localhost:19000",     # React Native development server
     "http://192.168.100.4:8000",  # Local Django development server
+    "http://localhost:3001",     # React Native development server
+    "https://crm.agrieldo.com",
+    "https://agrieldo.com",
+
+    "http://192.168.100.4:3001",  # Local Django development server
+
+
+    "http://localhost:3000",     # React Native development server
+
+
 ]
+
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -168,6 +190,15 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+
+# settings.py
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Change this if you're using a different broker
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'  # You can change the backend as well
+CELERY_TIMEZONE = 'Africa/Nairobi'  # Match Django's TIME_ZONE if changed
+CELERY_ENABLE_UTC = True  # Enable UTC support
 
 
 REST_FRAMEWORK = {
@@ -192,6 +223,7 @@ SOCIAL_AUTH_FACEBOOK_KEY = '<your-facebook-app-id>'
 SOCIAL_AUTH_FACEBOOK_SECRET = '<your-facebook-app-secret>'
 
 SOCIAL_AUTH_JSONFIELD_ENABLED = True  # For storing extra data from the social login response
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # Increase to 5MB or more as needed
 
 
 SIMPLE_JWT = {
@@ -237,7 +269,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -245,7 +277,7 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 import os
-STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles/')
 # settings.py
 
 MEDIA_URL = '/media/'

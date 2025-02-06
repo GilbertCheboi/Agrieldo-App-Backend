@@ -1,7 +1,13 @@
 from rest_framework import serializers
-from .models import Product
+from .models import Auction
+from animals.models import Animal
+from animals.serializers import AnimalSerializer  # Import the AnimalSerializer
 
-class ProductSerializer(serializers.ModelSerializer):
+
+class AuctionSerializer(serializers.ModelSerializer):
+    animal = AnimalSerializer()  # Use AnimalSerializer to fetch animal details
+
     class Meta:
-        model = Product
-        fields = ['name', 'description', 'price', 'auction_end_date']
+        model = Auction
+        fields = ['id', 'animal', 'price', 'description', 'auction_end_date', 'location']
+

@@ -1,0 +1,40 @@
+nohup: ignoring input
+[2024-12-22 12:33:23,159: INFO/MainProcess] beat: Starting...
+[2024-12-22 12:33:23,174: ERROR/MainProcess] Removing corrupted schedule file 'celerybeat-schedule': error(11, 'Resource temporarily unavailable')
+Traceback (most recent call last):
+  File "/root/myprojectdir/myprojectenv/lib/python3.12/site-packages/celery/beat.py", line 531, in setup_schedule
+    self._store = self._open_schedule()
+                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/myprojectdir/myprojectenv/lib/python3.12/site-packages/celery/beat.py", line 521, in _open_schedule
+    return self.persistence.open(self.schedule_filename, writeback=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/shelve.py", line 243, in open
+    return DbfilenameShelf(filename, flag, protocol, writeback)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/shelve.py", line 227, in __init__
+    Shelf.__init__(self, dbm.open(filename, flag), protocol, writeback)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/dbm/__init__.py", line 95, in open
+    return mod.open(file, flag, mode)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+_gdbm.error: [Errno 11] Resource temporarily unavailable: 'celerybeat-schedule'
+[2024-12-22 12:34:00,002: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:35:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:36:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:37:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:38:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:39:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:40:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:41:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:42:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:43:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:44:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:45:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:46:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:47:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:48:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:49:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:50:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:51:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:52:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)
+[2024-12-22 12:53:00,000: INFO/MainProcess] Scheduler: Sending due task send-weekly-html-newsletter-every-minute (Subscriber.tasks.send_weekly_html_newsletter_task)

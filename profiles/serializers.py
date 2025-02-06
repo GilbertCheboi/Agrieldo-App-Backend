@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Farmer, Vet
+from .models import Farmer, Vet, Lead, Staff
 
 class FarmerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -18,3 +18,16 @@ class VetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vet
         fields = ['first_name', 'last_name', 'phone_number', 'is_available', 'last_active']
+
+class StaffSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Staff
+        fields = ['user', 'phone_number', 'farm_location', 'image', 'first_name', 'second_name', 'banner']
+        read_only_fields = ['user']  # Only the user cannot be modified
+
+
+
+class LeadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lead
+        fields = '__all__'

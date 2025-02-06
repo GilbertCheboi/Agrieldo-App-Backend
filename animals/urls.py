@@ -16,6 +16,8 @@ from .views import (
     BeefMedicalRecordListCreateView,
     SheepMedicalRecordListCreateView,
     GoatMedicalRecordListCreateView,
+    AnimalGalleryListCreateView,
+    AnimalGalleryRetrieveDestroyView,
 
 )
 
@@ -39,6 +41,11 @@ urlpatterns = [
     path('goats/<int:pk>/', GoatDetailView.as_view(), name='goat-detail'),
     path('goats/<int:pk>/medical-records/', GoatMedicalRecordListCreateView.as_view(), name='goats_medical-record-list-create'),
 
+
+    path('animals/<int:animal_id>/gallery/', AnimalGalleryListCreateView.as_view(), name='animal-gallery-list-create'),
+
+    # Retrieve and delete a specific gallery image for an animal
+    path('animals/<int:animal_id>/gallery/<int:image_id>/', AnimalGalleryRetrieveDestroyView.as_view(), name='animal-gallery-retrieve-destroy'),
 
 ]
 

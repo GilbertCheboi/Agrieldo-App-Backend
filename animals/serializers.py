@@ -1,7 +1,7 @@
 # serializers.py
 
 from rest_framework import serializers
-from .models import Animal, Dairy_Cow, Beef_Cow, Sheep, Goat, DairyMedicalRecord, BeefMedicalRecord, SheepMedicalRecord, GoatMedicalRecord
+from .models import Animal, Dairy_Cow, Beef_Cow, Sheep, Goat, DairyMedicalRecord, BeefMedicalRecord, SheepMedicalRecord, GoatMedicalRecord, AnimalGallery
 
 class AnimalSerializer(serializers.ModelSerializer):
     class Meta:
@@ -61,3 +61,7 @@ class GoatMedicalRecordSerializer(serializers.ModelSerializer):
         model = GoatMedicalRecord
         fields = '__all__'
 
+class AnimalGallerySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AnimalGallery
+        fields = ['id', 'animal', 'image', 'description', 'created_at']

@@ -1,4 +1,6 @@
 from rest_framework import generics
+from rest_framework.views import APIView
+
 from rest_framework.permissions import IsAuthenticated
 from .models import ( Animal, Dairy_Cow, Beef_Cow, Sheep,
 Goat,
@@ -6,6 +8,7 @@ DairyMedicalRecord,
 BeefMedicalRecord,
 SheepMedicalRecord,
 GoatMedicalRecord,
+AnimalGallery,
 )
 
 from .serializers import (
@@ -18,6 +21,7 @@ from .serializers import (
     BeefMedicalRecordSerializer,
     SheepMedicalRecordSerializer,
     GoatMedicalRecordSerializer,
+    AnimalGallerySerializer,
 
 )
 import logging
@@ -148,3 +152,38 @@ class GoatMedicalRecordListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         # Automatically assign the authenticated user as the veterinarian
         serializer.save(veterinarian=self.request.user)
+
+class AnimalGalleryListCreateView(APIView):
+    permission_classes = [IsAuthenticated]  # You can adjust the permission as needed
+
+    def get(self, request, animal_id):
+        # List all images in the gallery for the given animal
+        animal = get_object_or_404(Animal, id=animal_id)
+        gallery = AnimalGallery.objects.filter(animal=animal)
+        serializer = AnimalGallerySerializer(gallery, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, animal_id):
+        # Create a new gallery image
+        animal = get_object_or_404(Animal, id=animal_id)
+        serializer = AnimalGallerySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(animal=animal)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AnimalGalleryRetrieveDestroyView(APIView):
+    permission_classes = [IsAuthenticated]  # You can adjust the permission as needed
+
+    def get(self, request, animal_id, image_id):
+        # Retrieve a single gallery image
+        gallery_image = get_object_or_404(AnimalGallery, id=image_id, animal__id=animal_id)
+        serializer = AnimalGallerySerializer(gallery_image)
+        return Response(serializer.data)
+
+    def delete(self, request, animal_id, image_id):
+        # Delete a gallery image
+        gallery_image = get_object_or_404(AnimalGallery, id=image_id, animal__id=animal_id)
+        gallery_image.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
