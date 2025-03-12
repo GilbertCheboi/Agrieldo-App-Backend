@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Production
+from .models import Production, ProductionRecord
 
 class ProductionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -14,3 +14,11 @@ class ProductionSerializer(serializers.ModelSerializer):
         user = self.context['request'].user  # Get the user from the request context
         validated_data['farmer'] = user
         return super().create(validated_data)
+
+
+class ProductionRecordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductionRecord
+        fields = ['id', 'farm', 'commodity', 'quantity', 'created_at']
+        read_only_fields = ['id', 'created_at']  # Prevent modification of created_at
+

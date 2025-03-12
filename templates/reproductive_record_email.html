@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reproductive Record for {{ animal_tag }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7fa;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #ffa500; /* Orange from invoice */
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        p {
+            margin: 0 0 15px;
+            line-height: 1.5;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #ffa500; /* Orange header */
+            color: white;
+            font-weight: bold;
+        }
+        .total-row {
+            font-weight: bold;
+            background-color: #333333; /* Dark gray from invoice */
+            color: white;
+        }
+        .highlight {
+            color: #38a169; /* Green for event, modernized */
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #333333;
+            text-align: center;
+        }
+        .footer a {
+            color: #ffa500;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+            table {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>New Reproductive Record for {{ animal_tag }}</h1>
+        <p>Greetings {{ animal.owner.first_name|default:"Customer" }},</p>
+        <p>Here is the latest reproductive record for your animal:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Animal</td>
+                    <td>{{ animal_tag }} ({{ animal_name|default:"Unnamed" }})</td>
+                </tr>
+                <tr>
+                    <td>Date</td>
+                    <td>{{ date }}</td>
+                </tr>
+                <tr>
+                    <td>Event</td>
+                    <td class="highlight">{{ event }}</td>
+                </tr>
+                <tr>
+                    <td>Details</td>
+                    <td>{{ details|default:"N/A" }}</td>
+                </tr>
+                <tr>
+                    <td>Expected Calving Date</td>
+                    <td>{{ expected_calving_date|default:"N/A" }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="footer">
+            <p>Thank you for choosing AgriEldo!<br>For inquiries, contact <a href="mailto:support@agrieldo.com">support@agrieldo.com</a></p>
+            <p>Best Regards,<br>AgriEldo Team</p>
+        </div>
+    </div>
+</body>
+</html>

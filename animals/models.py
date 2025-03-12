@@ -1,115 +1,198 @@
+# animals/models.py
 from django.db import models
+from datetime import timedelta
+from farms.models import Farm  # Import Farm from farms app
 from django.conf import settings
-from farms.models import Farm
+from django.utils import timezone
 
+from django.db import models
+from django.utils import timezone
+from datetime import timedelta
+from django.conf import settings
 
 class Animal(models.Model):
-    GENDER_CHOICES = [
-        ('M', 'Male'),
-        ('F', 'Female'),
-        ('U', 'Unknown'),
-    ]
+    tag = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50, blank=True, null=True)
+    breed = models.CharField(max_length=50)
+    dob = models.DateField()
+    gender = models.CharField(max_length=10)
+    farm = models.ForeignKey('farms.Farm', on_delete=models.CASCADE, related_name='animals')
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='animals_profile'
+    )
+    assigned_worker = models.CharField(max_length=100)
 
-    # Fields for the naming convention
-    farm_name = models.CharField(max_length=50, blank=True, null=True)
-    family_line = models.CharField(max_length=10, blank=True, null=True)
-    generation = models.CharField(max_length=10, blank=True, null=True)
-    serial_number = models.PositiveIntegerField(blank=True, null=True)
-    year_of_birth = models.PositiveIntegerField(blank=True, null=True)
+    def __str__(self):
+        return self.tag
 
-    # Additional animal details
-    name = models.CharField(max_length=100)
-    species = models.CharField(max_length=50)
-    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='U')
-    is_for_sale = models.BooleanField(default=False)
-    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='animals')
-    image = models.ImageField(upload_to='animals/', blank=True, null=True)  # New image field
-    age = models.PositiveIntegerField()
+    def category(self):
+        lactation = self.lactation_status if hasattr(self, 'lactation_status') else None
+        repro_history = self.reproductive_history.order_by('-date').first() if self.reproductive_history.exists() else None
+        age_months = (timezone.now().date() - self.dob).days / 30
 
-    # Automatically generate the tag_name based on the naming convention
+        if self.gender == "Male":
+            return "Bull"
+        elif age_months < 6:
+            return "Calf"
+        elif not lactation or lactation.lactation_number == 0:
+            return "Heifer"
+        elif lactation and lactation.is_milking:
+            return "Milking"
+        elif lactation and not lactation.is_milking:
+            return "Dry"
+        return "Heifer"
+
     @property
-    def tag(self):
-        return f"{self.farm_name}-{self.family_line}-G{self.generation}-" \
-               f"{str(self.serial_number).zfill(3)}-{self.year_of_birth}"
+    def is_pregnant(self):
+        if not self.reproductive_history.exists():
+            return False
+        latest_event = self.reproductive_history.order_by('-date').first()
+        if latest_event.is_pregnancy_start:
+            calving_after = self.reproductive_history.filter(
+                event="Calving",
+                date__gt=latest_event.date
+            ).exists()
+            return not calving_after
+        return False
+
+    @property
+    def is_sick(self):
+        recent_threshold = timezone.now().date() - timedelta(days=30)
+        return self.health_records.filter(
+            is_sick=True,
+            date__gte=recent_threshold
+        ).exists()
+
+
+class AnimalImage(models.Model):
+    animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='animal_images/', null=True, blank=True)
+
+    caption = models.CharField(max_length=100, blank=True, null=True)
 
     def __str__(self):
-        return f"{self.name} ({self.species}) - {self.tag}"
+        return f"Image for {self.animal.tag}"
 
-class Dairy_Cow(Animal):
-    breed = models.CharField(max_length=100, blank=True, null=True)
-    milk_production = models.FloatField(null=True, blank=True)  # in liters
 
-    def __str__(self):
-        return f"Cow: {self.name} (Breed: {self.breed})"
 
-class Beef_Cow(Animal):
-    breed = models.CharField(max_length=100, blank=True, null=True)
-    weight = models.FloatField(blank=True, null=True)  # in kgs
-
-    def __str__(self):
-        return f"Cow: {self.name} (Breed: {self.breed})"
-
-# Model for Sheep
-class Sheep(Animal):
-    wool_yield = models.FloatField(blank=True, null=True)  # in kilograms
-    twin = models.BooleanField(default=False)
+class HealthRecord(models.Model):
+    animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='health_records')
+    date = models.DateField()
+    type = models.CharField(max_length=50)
+    details = models.TextField()
+    is_sick = models.BooleanField(default=False)
+    clinical_signs = models.TextField(blank=True, null=True)  # New field
+    diagnosis = models.TextField(blank=True, null=True)      # New field
+    treatment = models.TextField(blank=True, null=True)      # New field
 
     def __str__(self):
-        return f"Sheep: {self.name} (Wool yield: {self.wool_yield} kg)"
+        return f"{self.date} - {self.type}"
 
-# Model for Goats
-class Goat(Animal):
-    meat_yield = models.FloatField()  # in kilograms
 
-    def __str__(self):
-        return f"Goat: {self.name} (Meat yield: {self.meat_yield} kg)"
-
-class SheepMedicalRecord(models.Model):
-    animal = models.ForeignKey(Sheep, on_delete=models.CASCADE, related_name='sheep_medical_records')
-    date = models.DateField(auto_now_add=True)
-    diagnosis = models.CharField(max_length=255)
-    treatment = models.TextField()
-    veterinarian = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sheep_medical_records')
+class ProductionData(models.Model):
+    # Define session choices as a tuple of tuples
+    SESSION_CHOICES = (
+        ('MORNING', 'Morning'),
+        ('AFTERNOON', 'Afternoon'),
+        ('EVENING', 'Evening'),
+    )
     
-    def __str__(self):
-        return f"Medical Record for {self.animal.name} on {self.date}"
-
-class DairyMedicalRecord(models.Model):
-    animal = models.ForeignKey(Dairy_Cow, on_delete=models.CASCADE, related_name='dairy_medical_records')
-    date = models.DateField(auto_now_add=True)
-    diagnosis = models.CharField(max_length=255)
-    treatment = models.TextField()
-    veterinarian = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='dairy_medical_records')
-    
-    def __str__(self):
-        return f"Medical Record for {self.animal.name} on {self.date}"
-class BeefMedicalRecord(models.Model):
-    animal = models.ForeignKey(Beef_Cow, on_delete=models.CASCADE, related_name='beef_medical_records')
-    date = models.DateField(auto_now_add=True)
-    diagnosis = models.CharField(max_length=255)
-    treatment = models.TextField()
-    veterinarian = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='beef_medical_records')
-    
-    def __str__(self):
-        return f"Medical Record for {self.animal.name} on {self.date}"
-class GoatMedicalRecord(models.Model):
-    animal = models.ForeignKey(Goat, on_delete=models.CASCADE, related_name='goat_medical_records')
-    date = models.DateField(auto_now_add=True)
-    diagnosis = models.CharField(max_length=255)
-    treatment = models.TextField()
-    veterinarian = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='goat_medical_records')
-    
-    def __str__(self):
-        return f"Medical Record for {self.animal.name} on {self.date}"
-
-
-
-class AnimalGallery(models.Model):
-    animal = models.ForeignKey(Animal, related_name='gallery', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='animals/gallery/', null=True, blank=True)
-    description = models.TextField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='production_data')
+    date = models.DateField()
+    session = models.CharField(max_length=10, choices=SESSION_CHOICES, default='MORNING')
+    milk_yield = models.FloatField()
+    feed_consumption = models.FloatField()
+    scc = models.IntegerField()
+    fat_percentage = models.FloatField()
+    protein_percentage = models.FloatField()
 
     def __str__(self):
-        return f"Gallery Image for {self.animal.name} ({self.created_at})"
+        return f"{self.date} - {self.session} - {self.milk_yield}L"
+
+
+class ReproductiveHistory(models.Model):
+    animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='reproductive_history')
+    date = models.DateField()
+    event = models.CharField(max_length=50)
+    details = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.date} - {self.event}"
+
+    @property
+    def is_pregnancy_start(self):
+        return self.event in ["AI", "Natural Breeding"]
+
+    @property
+    def expected_calving_date(self):
+        if self.is_pregnancy_start:
+            return self.date + timedelta(days=280)
+        return None
+
+class FeedManagement(models.Model):
+    animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='feed_management')
+    date = models.DateField()
+    type = models.CharField(max_length=50)
+    quantity = models.CharField(max_length=20)
+
+    def __str__(self):
+        return f"{self.date} - {self.type}"
+
+class FinancialDetails(models.Model):
+    animal = models.OneToOneField(Animal, on_delete=models.CASCADE, related_name='financial_details')
+    feed_cost_per_month = models.FloatField()
+    vet_expenses = models.FloatField()
+    breeding_costs = models.FloatField()
+    revenue_from_milk = models.FloatField()
+
+    def __str__(self):
+        return f"Financials for {self.animal.tag}"
+
+class LactationStatus(models.Model):
+    animal = models.OneToOneField('Animal', on_delete=models.CASCADE, related_name='lactation_status')
+    lactation_number = models.IntegerField()
+    days_in_milk = models.IntegerField(editable=False)  # Read-only, computed
+    is_milking = models.BooleanField(default=True)
+    last_calving_date = models.DateField(null=True, blank=True)  # Date of last calving
+    expected_calving_date = models.DateField(null=True, blank=True)  # EDC
+
+    def save(self, *args, **kwargs):
+        # Update days_in_milk from last_calving_date
+        if self.last_calving_date:
+            self.days_in_milk = (timezone.now().date() - self.last_calving_date).days
+        else:
+            self.days_in_milk = 0  # Default if no calving yet
+        
+        # Update expected_calving_date from latest pregnancy start
+        latest_breeding = self.animal.reproductive_history.filter(
+            event__in=["AI", "Natural Breeding"]
+        ).order_by('-date').first()
+        if latest_breeding and not self.animal.reproductive_history.filter(
+            event="Calving", date__gt=latest_breeding.date
+        ).exists():
+            self.expected_calving_date = latest_breeding.date + timedelta(days=280)
+        else:
+            self.expected_calving_date = None
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Lactation {self.lactation_number} - {self.days_in_milk} DIM"
+
+    @property
+    def current_days_in_milk(self):
+        if self.last_calving_date:
+            return (timezone.now().date() - self.last_calving_date).days
+        return self.days_in_milk
+
+class LifetimeStats(models.Model):
+    animal = models.OneToOneField(Animal, on_delete=models.CASCADE, related_name='lifetime_stats')
+    total_milk = models.FloatField()
+    avg_yield = models.FloatField()
+    calves = models.IntegerField()
+
+    def __str__(self):
+        return f"Lifetime Statsefor {self.animal.tag}"
+        fields = ['lactation_number', 'days_in_milk', 'is_milking']

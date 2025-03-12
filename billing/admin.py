@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Invoice, InvoiceItem, Quotations, QuotationItem
+from .models import Invoice, InvoiceItem, Quotations, QuotationItem, Receipt, ReceiptItem
 
 class InvoiceItemInline(admin.TabularInline):
     model = InvoiceItem
@@ -39,9 +39,21 @@ class QuotationItemAdmin(admin.ModelAdmin):
     search_fields = ('description',)
 
 
+class ReceiptItemInline(admin.TabularInline):
+    model = ReceiptItem
+    extra = 1
+
+@admin.register(Receipt)
+class ReceiptAdmin(admin.ModelAdmin):
+    list_display = ('id', 'customer_name', 'payment_date', 'payment_method', 'amount_paid', 'created_at')
+    search_fields = ('customer_name', 'customer_email', 'customer_phone')
+    list_filter = ('payment_method', 'payment_date')
+    inlines = [ReceiptItemInline]
+
 # Register the models in the admin interface
 admin.site.register(Invoice, InvoiceAdmin)
 admin.site.register(InvoiceItem, InvoiceItemAdmin)
 admin.site.register(Quotations, QuotationAdmin)
 admin.site.register(QuotationItem, QuotationItemAdmin)
 
+admin.site.register(ReceiptItem)

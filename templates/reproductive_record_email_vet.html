@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vet Notification - Reproductive Record for {{ animal_tag }}</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      background-color: #f4f7fa;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #ffa500;
+      font-size: 24px;
+      margin-bottom: 15px;
+    }
+    p {
+      margin: 0 0 15px;
+      line-height: 1.5;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #ffa500;
+      color: white;
+      font-weight: bold;
+    }
+    .highlight {
+      color: #e53e3e;
+      font-weight: bold;
+    }
+    .footer {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #333333;
+      text-align: center;
+    }
+    .footer a {
+      color: #ffa500;
+      text-decoration: none;
+    }
+    .footer a:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 600px) {
+      .container { padding: 15px; }
+      table { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Veterinary Notification: Reproductive Record - {{ animal_tag }}</h1>
+    <p>This is an automated alert concerning a new reproductive event logged for an animal under your supervision.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Animal</td>
+          <td>{{ animal_tag }} ({{ animal_name|default:"Unnamed" }})</td>
+        </tr>
+        <tr>
+          <td>Date</td>
+          <td>{{ date }}</td>
+        </tr>
+        <tr>
+          <td>Event</td>
+          <td class="highlight">{{ event }}</td>
+        </tr>
+        <tr>
+          <td>Details</td>
+          <td>{{ details|default:"N/A" }}</td>
+        </tr>
+        <tr>
+          <td>Expected Calving Date</td>
+          <td>{{ expected_calving_date|default:"N/A" }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="footer">
+      <p>AgriEldo Veterinary Monitoring System<br>For support, contact <a href="mailto:support@agrieldo.com">support@agrieldo.com</a></p>
+    </div>
+  </div>
+</body>
+</html>
+

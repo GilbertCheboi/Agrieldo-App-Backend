@@ -1,11 +1,14 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Production
-from .serializers import ProductionSerializer
+from .models import Production, ProductionRecord
+from .serializers import ProductionSerializer,  ProductionRecordSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
 from rest_framework.views import APIView
+from rest_framework import generics, permissions
+from .permissions import IsFarmerOrStaff
+from django.utils.timezone import now
 
 
 # View to add a new production record
@@ -108,3 +111,134 @@ class ProductionByAnimalView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+# ✅ List and Create Production Records
+
+
+
+
+class ProductionRecordListCreateView(APIView):
+    """
+    Handles listing and creating production records.
+    Only farmers and staff can create records for their farm.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.user_type == 1:  # Farmer (Owner)
+            records = ProductionRecord.objects.filter(farm__owner=user)
+        elif user.user_type == 3:  # Staff
+            records = ProductionRecord.objects.filter(farm__staff=user)
+        else:
+            return Response({"message": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = ProductionRecordSerializer(records, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        """
+        Create a new production record.
+        Staff and farmers can add records to their farm.
+        """
+        user = request.user
+        farm = None
+
+        if user.user_type == 1:  # Farmer (Owner)
+            farm = user.owned_farms.first()
+        elif user.user_type == 3:  # Staff
+            farm = user.staff_farms.first()
+
+        if not farm:
+            return Response({"message": "No associated farm found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = ProductionRecordSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(farm=farm, farmer=user)  # ✅ Assign farmer explicitly
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProductionRecordDetailView(APIView):
+    """
+    Handles retrieving, updating, and deleting a specific production record.
+    Only farm owners and staff can modify records for their farm.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsFarmerOrStaff]
+
+    def get_object(self, pk, user):
+        try:
+            record = ProductionRecord.objects.get(pk=pk)
+            if record.farm.owner == user or user in record.farm.staff.all():
+                return record
+            return None
+        except ProductionRecord.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        record = self.get_object(pk, request.user)
+        if not record:
+            return Response({"message": "Not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
+        serializer = ProductionRecordSerializer(record)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, pk):
+        record = self.get_object(pk, request.user)
+        if not record:
+            return Response({"message": "Not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ProductionRecordSerializer(record, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        record = self.get_object(pk, request.user)
+        if not record:
+            return Response({"message": "Not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
+
+        record.delete()
+        return Response({"message": "Record deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+
+class TodayProductionView(APIView):
+    """
+    API endpoint to fetch production records for today only.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        today = now().date()
+
+        if user.user_type == 1:  # Farmer
+            records = ProductionRecord.objects.filter(farm__owner=user, created_at=today)
+        elif user.user_type == 3:  # Staff
+            records = ProductionRecord.objects.filter(farm__staff=user, created_at=today)
+        else:
+            return Response({"message": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = ProductionRecordSerializer(records, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ProductionHistoryView(APIView):
+    """
+    API endpoint to fetch all production records except today's.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        today = now().date()
+
+        if user.user_type == 1:  # Farmer
+            records = ProductionRecord.objects.filter(farm__owner=user).exclude(created_at=today)
+        elif user.user_type == 3:  # Staff
+            records = ProductionRecord.objects.filter(farm__staff=user).exclude(created_at=today)
+        else:
+            return Response({"message": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = ProductionRecordSerializer(records, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+

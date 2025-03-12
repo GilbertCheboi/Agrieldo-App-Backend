@@ -23,8 +23,6 @@ class User(AbstractUser):
     phone_number = models.CharField(max_length=15, null=True, blank=True)  # Remove `unique=True` temporarily
 
     fcm_token = models.CharField(max_length=255, blank=True, null=True, help_text="Firebase Cloud Messaging token")
-    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
     def __str__(self):
         return f"{self.username} ({self.get_user_type_display()})"

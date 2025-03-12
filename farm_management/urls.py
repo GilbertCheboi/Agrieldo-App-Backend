@@ -28,7 +28,6 @@ urlpatterns = [
     path('api/education/', include('education.urls')),
     path('api/animals/', include('animals.urls')),  # Changed to a specific path for clarity
     path('api/farms/', include('farms.urls')),      # Ensured no duplicate path for farms
-    path('api/vet_requests/', include('vet_requests.urls')),  # Added path for vet_request app
     path('api/finances/', include('finances.urls')),
     path('api/feed/', include('feed.urls')),  # Include finances app URLs
     path('api/profiles/', include('profiles.urls')),  # Include profile URLs
@@ -39,6 +38,14 @@ urlpatterns = [
     path('api/feed_store/', include('feed_store.urls')),  # Include feed_store app URLs
     path('api/drug_store/', include('drug_store.urls')),  # Include drug_store app URLs
     path('api/calendar/', include('calendar_app.urls')),  # Include calendar_app app URLs
+    path('api/tasks/', include('tasks.urls')),  # Include calendar_app app URLs
+    path('api/machinery/', include('machinery.urls')),  # Include calendar_app app URLs
+    path('api/contracts/', include('contracts.urls')),  # Include calendar_app app URLs
+    path('api/inventory/', include('inventory.urls')),  # Include calendar_app app URLs
+    path('api/sheep_app/', include('sheep_app.urls')),  # Include calendar_app app URLs
+
+
+
 
 
 

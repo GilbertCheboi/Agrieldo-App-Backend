@@ -4,7 +4,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from profiles.models import Farmer, Vet, Staff  # Import the profile models
-from .serializers import UserRegistrationSerializer
+from .serializers import UserRegistrationSerializer, UserSerializer
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from .serializers import PasswordResetRequestSerializer, PasswordResetSerializer
@@ -13,6 +13,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from .models import User, PasswordResetToken
 from rest_framework.views import APIView
+from rest_framework import generics, permissions
 
 import firebase_admin
 from firebase_admin import credentials, auth
@@ -47,7 +48,7 @@ class UserRegistrationView(generics.CreateAPIView):
         if user_type == "1":  # Farmer
             Farmer.objects.create(user=user, phone_number=request.data.get('phone_number', ''))
             print("Farmer profile created")  # Debugging line
-        elif user_type == "3":  # Farmer
+        elif user_type == "3":  # Staff
             Staff.objects.create(user=user, phone_number=request.data.get('phone_number', ''))
             print("Staff profile created")  # Debugging line
 
@@ -56,8 +57,6 @@ class UserRegistrationView(generics.CreateAPIView):
             Vet.objects.create(
                 user=user,
                 phone_number=request.data.get('phone_number', ''),
-                latitude=request.data.get('latitude', 0.0),
-                longitude=request.data.get('longitude', 0.0)
             )
             print("Vet profile created")  # Debugging line
         else:
@@ -198,3 +197,10 @@ class PasswordResetView(APIView):
             return Response({"message": "Your password has been successfully reset."}, status=status.HTTP_200_OK)
         except PasswordResetToken.DoesNotExist:
             return Response({"error": "Invalid or expired reset token."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserListView(generics.ListAPIView):
+    """API endpoint to list all users."""
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]  # Require authentication

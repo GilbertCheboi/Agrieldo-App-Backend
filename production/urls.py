@@ -1,5 +1,8 @@
 from django.urls import path
-from .views import ProductionList, ProductionDetail, add_production, ProductionByAnimalView
+from .views import (ProductionList, ProductionDetail, add_production, ProductionByAnimalView, ProductionRecordListCreateView,
+    ProductionRecordDetailView,
+    TodayProductionView,
+    ProductionHistoryView,)
 
 
 urlpatterns = [
@@ -13,5 +16,8 @@ urlpatterns = [
     path('add_production/', add_production, name='add-production'),
 
     path('detail_animal/<int:animal_id>/', ProductionByAnimalView.as_view(), name='productions-by-animal'),
-
+    path('records/', ProductionRecordListCreateView.as_view(), name='production_list_create'),
+    path('records/<int:pk>/', ProductionRecordDetailView.as_view(), name='production_detail'),
+    path('records/today/', TodayProductionView.as_view(), name='today_production'),
+    path('records/history/', ProductionHistoryView.as_view(), name='production_history'),
 ]

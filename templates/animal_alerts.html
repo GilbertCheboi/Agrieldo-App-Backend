@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Animal Alerts - {{ today }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        .header {
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .header h2 {
+            margin: 0;
+            font-size: 24px;
+            color: #ffa500;
+        }
+        .farm-info {
+            margin-top: 10px;
+            font-size: 16px;
+            color: #555;
+        }
+        .alert-box {
+            margin-top: 25px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        .animal-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .alert-list {
+            list-style-type: disc;
+            padding-left: 20px;
+            color: #cc0000;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 13px;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Animal Health & Production Alerts</h2>
+        </div>
+
+        <div class="farm-info">
+            <p><strong>Farm Name:</strong> {{ farm.name }}</p>
+            <p><strong>Date:</strong> {{ today }}</p>
+        </div>
+
+{% for alert in alerts %}
+    <div class="alert-box">
+        <div class="animal-name">
+            {{ alert.animal_name }}
+            {% if alert.animal_tag %}
+                <span style="font-weight: normal; color: #777; font-size: 15px;">(Tag: {{ alert.animal_tag }})</span>
+            {% endif %}
+        </div>
+        <ul class="alert-list">
+            {% for msg in alert.alerts %}
+                <li>{{ msg }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endfor %}
+
+        <div class="footer">
+            <p>This is an automated alert from Agrieldo Farm Management System.</p>
+            <p>For more information, please log in to your dashboard.</p>
+        </div>
+    </div>
+</body>
+</html>
+

@@ -1,31 +1,59 @@
-from django.conf import settings
 from django.db import models
+from django.conf import settings
+from django.utils.timezone import now
+
+from django.db import models
+from django.utils.timezone import now
+import os
 
 class Feed(models.Model):
-    FEED_TYPES = [
-        ('silage', 'Silage'),
-        ('concentrates', 'Concentrates'),
-        ('hay', 'Hay'),
-        # Add other feed types if necessary
-    ]
-
-    farmer = models.ForeignKey(
+    name = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    quantity_kg = models.FloatField(default=0.0, null=True, blank=True)
+    created_at = models.DateTimeField(default=now, null=True, blank=True)
+    image = models.ImageField(upload_to='feed_images/', null=True, blank=True)
+    
+    owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='feeds')
+        related_name='feeds_farm',
+        null=True,
+        blank=True
+    )
 
-    feed_type = models.CharField(max_length=20, choices=FEED_TYPES)
-    date = models.DateField()
-    starting_balance = models.DecimalField(max_digits=10, decimal_places=2)  # Amount of feed at the beginning of the day
-    closing_balance = models.DecimalField(max_digits=10, decimal_places=2)  # Amount of feed at the end of the day
-    amount_added = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Feed added
-    amount_consumed = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Feed consumed
+    def __str__(self):
+        return f"{self.name} - {self.quantity_kg} kg"
+
+
+
+
+class FeedTransaction(models.Model):
+    FEED_ACTIONS = [
+        ('ADD', 'Added'),
+        ('CONSUME', 'Consumed')
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='feeds',
+        null=True,
+        blank=True
+    )
+
+    feed = models.ForeignKey(Feed, on_delete=models.CASCADE, null=True, blank=True)
+    quantity_kg = models.FloatField(null=True, blank=True)
+    action = models.CharField(max_length=10, choices=FEED_ACTIONS, null=True, blank=True)
+    timestamp = models.DateTimeField(default=now, null=True, blank=True)  # Allow null and blank values
 
     def save(self, *args, **kwargs):
-        # Calculate closing balance as: starting balance + feed added - feed consumed
-        self.closing_balance = self.starting_balance + self.amount_added - self.amount_consumed
+        if self.feed:  # Ensure feed exists before updating stock
+            if self.action == 'ADD':
+                self.feed.quantity_kg += self.quantity_kg or 0
+            elif self.action == 'CONSUME':
+                self.feed.quantity_kg -= self.quantity_kg or 0
+            self.feed.save()
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.farmer.username} - {self.feed_type} - {self.date}"
+        return f"{self.user} {self.action.lower()} {self.quantity_kg} kg of {self.feed.name if self.feed else 'Unknown'} on {self.timestamp}"
 

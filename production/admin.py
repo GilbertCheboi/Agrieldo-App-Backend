@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Production
+from .models import Production, ProductionRecord
 
 class ProductionAdmin(admin.ModelAdmin):
     # Fields to display in the list view
@@ -22,3 +22,10 @@ class ProductionAdmin(admin.ModelAdmin):
 
 # Register the model with the custom admin interface
 admin.site.register(Production, ProductionAdmin)
+@admin.register(ProductionRecord)
+class ProductionRecordAdmin(admin.ModelAdmin):
+    list_display = ("commodity", "quantity", "farm", "farmer", "created_at", "last_updated")
+    list_filter = ("commodity", "farm", "created_at")
+    search_fields = ("commodity", "farm__name", "farmer__username", "quantity")
+    ordering = ("-created_at",)
+

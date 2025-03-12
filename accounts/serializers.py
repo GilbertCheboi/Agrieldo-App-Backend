@@ -12,24 +12,33 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'phone_number', 'password', 'confirm_password', 'user_type']
+        fields = [
+            'username',
+            'email',
+            'phone_number',
+            'password',
+            'confirm_password',
+            'user_type'
+        ]
         extra_kwargs = {
-            'password': {'write_only': True},
+            'password': {'write_only': True}
         }
 
     def validate_user_type(self, value):
-        # Map string inputs to integer values if needed
-        if value == 'Farmer':
-            return User.FARMER
-        elif value == 'Vet':
-            return User.VET
-        elif value == 'Staff':
-            return User.STAFF  # Handle 'Staff' as well
-        elif value in [User.FARMER, User.VET, User.STAFF]:  # Allow integers directly
+        # Handle different formats (string or int)
+        if isinstance(value, str):
+            value_lower = value.lower()
+            if value_lower == 'farmer':
+                return User.FARMER
+            elif value_lower == 'vet':
+                return User.VET
+            elif value_lower == 'staff':
+                return User.STAFF
+            elif value.isdigit() and int(value) in [User.FARMER, User.VET, User.STAFF]:
+                return int(value)
+        elif isinstance(value, int) and value in [User.FARMER, User.VET, User.STAFF]:
             return value
-        else:
-            raise serializers.ValidationError("Invalid user type.")
-
+        raise serializers.ValidationError("Invalid user type.")
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
@@ -46,26 +55,29 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
-        if data['password'] != data['confirm_password']:
+        if data.get('password') != data.get('confirm_password'):
             raise serializers.ValidationError("Passwords do not match.")
         return data
 
     def create(self, validated_data):
-        # Remove confirm_password as we don't need to save it
-        validated_data.pop('confirm_password')
+        validated_data.pop('confirm_password', None)
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
-            phone_number=validated_data['phone_number'],
+            phone_number=validated_data.get('phone_number'),
             password=validated_data['password'],
             user_type=validated_data['user_type']
         )
         return user
-
-
 class PasswordResetRequestSerializer(serializers.Serializer):
     email_or_phone = serializers.CharField()
 
 class PasswordResetSerializer(serializers.Serializer):
     token = serializers.CharField()
     new_password = serializers.CharField(write_only=True, validators=[validate_password])
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "username",  "email"]

@@ -7,21 +7,27 @@ from celery.schedules import crontab
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'farm_management.settings')
 
 app = Celery('farm_management')
-
-# Using a string here means the worker doesn't have to serialize
-# the configuration object to child processes.
 app.config_from_object('django.conf:settings', namespace='CELERY')
+app.autodiscover_tasks()
 
-# Celery Beat schedule configuration (for weekly newsletters)
-from celery.schedules import crontab
-
+# Celery Beat schedule configuration
 app.conf.beat_schedule = {
+    # 📧 Weekly Newsletter - Every Monday at 10:00 AM
     'send-weekly-html-newsletter-every-monday-10am': {
         'task': 'Subscriber.tasks.send_weekly_html_newsletter_task',
-        'schedule': crontab(minute=0, hour=10, day_of_week='1'),  # Every Monday at 10:00 AM
+        'schedule': crontab(minute=0, hour=10, day_of_week='1'),  # Monday at 10:00 AM
+    },
+
+    # 🥛 Daily Milk Report - Every day at 10:00 PM
+    'send-daily-milk-report-10pm': {
+        'task': 'animals.tasks.send_milk_report_daily_task',
+        'schedule': crontab(minute=41, hour=12),  # 22:00 (10:00 PM daily)
+    },
+
+    # 🐄 Animal Alerts Email - Every day at 9:00 PM
+    'send-daily-animal-alerts-9pm': {
+        'task': 'animals.tasks.send_animal_alerts_task',
+        'schedule': crontab(minute=41, hour=12),  # 21:00 (9:00 PM daily)
     },
 }
-
-# Load task modules from all registered Django app configs.
-app.autodiscover_tasks()
 

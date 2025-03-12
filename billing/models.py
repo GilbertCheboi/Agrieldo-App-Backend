@@ -221,3 +221,63 @@ class QuotationItem(models.Model):
     def __str__(self):
         return f"{self.description} - {self.quantity} x Ksh.{self.unit_price}"
 
+
+
+class Receipt(models.Model):
+    customer_name = models.CharField(max_length=255)
+    customer_email = models.EmailField()
+    customer_phone = models.CharField(max_length=15)
+    payment_date = models.DateField(auto_now_add=True)
+    payment_method = models.CharField(max_length=50, choices=[
+        ('cash', 'Cash'),
+        ('mpesa', 'M-Pesa'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('cheque', 'Cheque')
+    ])
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Receipt for {self.customer_name}"
+
+    def generate_pdf(self):
+        """Generate the PDF version of the receipt and return it as a ContentFile."""
+        items = self.receipt_items.all()
+        total_amount = sum(item.total_price() for item in items)
+        html_content = render_to_string('receipt_pdf.html', {'receipt': self, 'items': items, 'total_amount': total_amount})
+        pdf_bytes = HTML(string=html_content).write_pdf()
+        pdf_file = BytesIO(pdf_bytes)
+        return pdf_file
+
+    def send_receipt_email(self):
+        """Send the receipt details via email with a PDF attachment."""
+        try:
+            pdf_file = self.generate_pdf()
+            subject = f"Receipt for Payment"
+            items = self.receipt_items.all()
+            total_amount = sum(item.total_price() for item in items)
+            body = render_to_string('receipt_email.html', {'receipt': self, 'items': items, 'total_amount': total_amount})
+            email = EmailMessage(
+                subject,
+                body,
+                settings.DEFAULT_FROM_EMAIL,
+                [self.customer_email],
+            )
+            email.content_subtype = 'html'
+            email.attach(f"Receipt_{self.id}.pdf", pdf_file.getvalue(), 'application/pdf')
+            email.send()
+            print(f"Receipt email sent to {self.customer_email}")
+        except Exception as e:
+            print(f"Error sending receipt email: {e}")
+
+class ReceiptItem(models.Model):
+    receipt = models.ForeignKey(Receipt, related_name='receipt_items', on_delete=models.CASCADE)
+    description = models.CharField(max_length=255)
+    quantity = models.PositiveIntegerField(default=1)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def total_price(self):
+        return self.quantity * self.unit_price
+
+    def __str__(self):
+        return f"{self.description} - {self.quantity} x {self.unit_price}"

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Invoice, InvoiceItem, Quotations, QuotationItem
+from .models import Invoice, InvoiceItem, Quotations, QuotationItem, Receipt, ReceiptItem
 
 class InvoiceItemSerializer(serializers.ModelSerializer):
     class Meta:
@@ -84,6 +84,49 @@ class QuotationSerializer(serializers.ModelSerializer):
         instance.quotation_items.all().delete()
         for item_data in items_data:
             QuotationItem.objects.create(invoice=instance, **item_data)
+
+        return instance
+
+class ReceiptItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReceiptItem
+        fields = ['id', 'description', 'quantity', 'unit_price']
+
+class ReceiptSerializer(serializers.ModelSerializer):
+    items = ReceiptItemSerializer(many=True, source='receipt_items', required=False)
+    amount_paid = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Receipt
+        fields = ['id', 'customer_name', 'customer_email', 'customer_phone', 'payment_date', 
+                  'payment_method', 'amount_paid', 'created_at', 'items']
+
+    def get_amount_paid(self, obj):
+        """Calculate total amount paid by summing up item prices."""
+        return sum(item.quantity * item.unit_price for item in obj.receipt_items.all())
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('receipt_items', [])
+        receipt = Receipt.objects.create(**validated_data)
+
+        # Create associated ReceiptItem instances
+        for item_data in items_data:
+            ReceiptItem.objects.create(receipt=receipt, **item_data)
+
+        return receipt
+
+    def update(self, instance, validated_data):
+        items_data = validated_data.pop('receipt_items', [])
+
+        # Update Receipt fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Clear existing items and recreate them
+        instance.receipt_items.all().delete()
+        for item_data in items_data:
+            ReceiptItem.objects.create(receipt=instance, **item_data)
 
         return instance
 

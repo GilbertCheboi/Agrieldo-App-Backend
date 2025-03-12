@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import UserRegistrationView, CustomTokenObtainPairView,  update_fcm_token, PasswordResetRequestView, PasswordResetView
+from .views import UserRegistrationView, CustomTokenObtainPairView,  update_fcm_token, PasswordResetRequestView, PasswordResetView, UserListView  
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -9,5 +9,7 @@ urlpatterns = [
     path('update-fcm-token/', update_fcm_token, name='update_fcm_token'),  # Define the URL pattern
     path('password-reset/', PasswordResetRequestView.as_view(), name='password-reset-request'),
     path('password-reset/confirm/', PasswordResetView.as_view(), name='password-reset-confirm'),
+    path("list_users/", UserListView.as_view(), name="user-list"),  # Ensure this line exists
+
 
 ]

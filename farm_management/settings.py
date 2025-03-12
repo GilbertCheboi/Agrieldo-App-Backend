@@ -46,15 +46,19 @@ INSTALLED_APPS = [
     'accounts',
     'billing',
     'messaging',
+    'inventory',
     'merchandise',
     'market',
     'Subscriber',
     'store',
+    'sheep_app',
     'education',
-    'contracts',
-    'animals',
+    'tasks',
+    'animals.apps.AnimalsConfig',
     'farms',
-    'vet_requests',
+    'machinery',
+    'contracts',
+    
     'finances',
     'feed',
     'profiles',
@@ -198,7 +202,7 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'  # You can change the backend as well
 CELERY_TIMEZONE = 'Africa/Nairobi'  # Match Django's TIME_ZONE if changed
-CELERY_ENABLE_UTC = True  # Enable UTC support
+CELERY_ENABLE_UTC = False  # Enable UTC support
 
 
 REST_FRAMEWORK = {
@@ -281,6 +285,41 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles/')
 # settings.py
 
 MEDIA_URL = '/media/'
+
+
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,  # Keep Django's default logging (e.g., HTTP requests)
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',  # Use curly braces for string formatting
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',  # Send logs to the console
+            'formatter': 'verbose',  # Use the readable format
+            'level': 'INFO',  # Show INFO and above (WARNING, ERROR)
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',  # Capture all logs at INFO level or higher
+    },
+    'loggers': {
+        'django': {  # Keep Django’s logs (e.g., HTTP requests)
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,  # Don’t send to root logger
+        },
+        'animals': {  # Specifically for your 'animals' app
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
 
 
