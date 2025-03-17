@@ -10,7 +10,8 @@ from .serializers import (
     TransactionSerializer,
 )
 from django.db import transaction
-from django.utils.dateparse import parse_date
+from rest_framework import permissions, status
+from django.utils.dateparse import parse_date, parse_datetime
 
 
 class ProduceListCreateView(APIView):
@@ -69,7 +70,7 @@ class InventoryListCreateView(APIView):
     def get(self, request):
         inventories = Inventory.objects.filter(user=request.user)
 
-        # Optional Date Filtering (start_date, end_date)
+        # Optional Date Filtering
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
 
@@ -95,48 +96,67 @@ class InventoryListCreateView(APIView):
                 outlet_id = data.get('outlet')
                 quantity = float(data.get('quantity'))
 
-                # Transfer from store to outlet
+                # ✅ Parse created_at datetime or fallback to now
+                created_at = data.get('created_at')
+                if created_at:
+                    created_at = parse_datetime(created_at)
+                else:
+                    created_at = timezone.now()
+                created_at_date = created_at.date()
+
+                # ➕ TRANSFER from Store to Outlet (date-aware deduction)
                 if store_id and outlet_id:
-                    # 1. Get store inventory (store only, no outlet)
+                    # Filter store inventory only for the same day
                     store_inventory = Inventory.objects.filter(
                         produce=produce_id,
                         store=store_id,
                         outlet=None,
-                        user=request.user
+                        user=request.user,
+                        created_at__date=created_at_date  # ✅ date-aware deduction
                     ).first()
 
                     if not store_inventory or store_inventory.quantity < quantity:
-                        return Response({"detail": "Insufficient stock in store."}, status=400)
+                        return Response({"detail": "Insufficient stock in store for the selected date."}, status=400)
 
-                    # 2. Deduct from store
+                    # Deduct from store
                     store_inventory.quantity -= quantity
                     store_inventory.save()
 
-                    # 3. Add to outlet inventory (create or update)
+                    # Add to outlet inventory for the same date
                     outlet_inventory, created = Inventory.objects.get_or_create(
                         produce_id=produce_id,
                         store_id=store_id,
                         outlet_id=outlet_id,
-                        user=request.user
+                        user=request.user,
+                        created_at__date=created_at_date
                     )
+
                     outlet_inventory.quantity += quantity
+
+                    if created:
+                        outlet_inventory.created_at = created_at  # Ensure same date if it's a new record
+
                     outlet_inventory.save()
 
-                    return Response(
-                        {"detail": "Stock transferred successfully."},
-                        status=status.HTTP_201_CREATED
-                    )
+                    serializer = InventorySerializer(outlet_inventory)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-                # If it's just an addition to store
+                # ➕ ADD to Store
                 elif store_id and not outlet_id:
-                    # Check if an inventory entry already exists (store-only)
+                    # Check if store inventory for same day already exists
                     store_inventory, created = Inventory.objects.get_or_create(
                         produce_id=produce_id,
                         store_id=store_id,
                         outlet=None,
-                        user=request.user
+                        user=request.user,
+                        created_at__date=created_at_date
                     )
+
                     store_inventory.quantity += quantity
+
+                    if created:
+                        store_inventory.created_at = created_at
+
                     store_inventory.save()
 
                     serializer = InventorySerializer(store_inventory)
@@ -147,7 +167,6 @@ class InventoryListCreateView(APIView):
 
         except Exception as e:
             return Response({"detail": str(e)}, status=500)
-
 class TransactionListCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 

@@ -25,6 +25,44 @@ class InventorySerializer(serializers.ModelSerializer):
         model = Inventory
         fields = '__all__'
 
+    def create(self, validated_data):
+        store = validated_data.get('store')
+        outlet = validated_data.get('outlet')
+        produce = validated_data.get('produce')
+        quantity = validated_data.get('quantity')
+
+        # Optional: handle created_at
+        created_at = validated_data.get('created_at', None)
+        if not created_at:
+            created_at = timezone.now()
+
+        # If outlet is set, it's a transfer - deduct from store
+        if outlet:
+            # Check if store has sufficient stock
+            from_store = Inventory.objects.filter(
+                produce=produce,
+                store=store,
+                outlet__isnull=True
+            ).order_by('-created_at').first()
+
+            if not from_store or from_store.total_quantity < quantity:
+                raise serializers.ValidationError("Not enough stock in store to transfer.")
+
+            # Deduct from store
+            from_store.total_quantity -= quantity
+            from_store.save()
+
+        # Now create the new inventory entry (for outlet or store addition)
+        inventory = Inventory.objects.create(
+            produce=produce,
+            store=store,
+            outlet=outlet,
+            quantity=quantity,
+            total_quantity=quantity,
+            created_at=created_at
+        )
+
+        return inventory
 
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:

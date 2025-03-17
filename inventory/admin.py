@@ -24,7 +24,7 @@ class OutletAdmin(admin.ModelAdmin):
 
 @admin.register(Inventory)
 class InventoryAdmin(admin.ModelAdmin):
-    list_display = ['produce', 'store', 'outlet', 'quantity', 'user', 'last_updated']
+    list_display = ['produce', 'store', 'outlet', 'created_at', 'quantity', 'user', 'last_updated']
     list_filter = ['store', 'outlet', 'user']
     search_fields = ['produce__name']
 

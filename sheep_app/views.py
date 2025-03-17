@@ -9,7 +9,8 @@ from .serializers import (
     SheepSerializer, SheepHealthRecordSerializer,
     SheepReproductionSerializer, SheepProductionSerializer,
     SheepImageSerializer, SheepTypeSerializer
-)
+    )
+from farms.models import Farm
 
 # Sheep Views
 class SheepListCreateView(ListCreateAPIView):
@@ -23,6 +24,12 @@ class SheepListCreateView(ListCreateAPIView):
             queryset = queryset.filter(farm_id=farm_id)
         return queryset
 
+    def perform_create(self, serializer):
+        # Validate farm ownership and save
+        farm_id = self.request.data.get('farm')
+        if not farm_id or not Farm.objects.filter(id=farm_id, owner=self.request.user).exists():
+            raise serializers.ValidationError("Invalid or unauthorized farm ID.")
+        serializer.save()
 class SheepDetailView(RetrieveUpdateDestroyAPIView):
     serializer_class = SheepSerializer
     permission_classes = [IsAuthenticated]

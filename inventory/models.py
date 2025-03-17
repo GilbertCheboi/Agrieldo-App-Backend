@@ -52,7 +52,7 @@ class Inventory(models.Model):
     store = models.ForeignKey(Store, null=True, blank=True, on_delete=models.CASCADE, related_name='store_inventory')
     outlet = models.ForeignKey(Outlet, null=True, blank=True, on_delete=models.CASCADE, related_name='outlet_inventory')
     quantity = models.FloatField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)  # ✅ Add this line
+    created_at = models.DateTimeField(blank=True, null=True)  # ✅ Add this line
 
     last_updated = models.DateTimeField(auto_now=True)
 
