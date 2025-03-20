@@ -98,6 +98,11 @@ CSRF_COOKIE_NAME = 'csrftoken'
 CSRF_COOKIE_SECURE = False  # Set to True for production with HTTPS
 CSRF_COOKIE_HTTPONLY = False
 
+# Celcom SMS credentials
+SMS_API_KEY = "7e773ee47f54a394a6613e1e276739ed"
+SMS_PARTNER_ID = "685"
+SMS_SHORTCODE = "AGRIELDO"
+
 
 ROOT_URLCONF = 'farm_management.urls'
 
@@ -282,7 +287,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 import os
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles/')
-# settings.py
+GDAL_LIBRARY_PATH = os.getenv("GDAL_LIBRARY_PATH", "/usr/lib/libgdal.so.30")
 
 MEDIA_URL = '/media/'
 

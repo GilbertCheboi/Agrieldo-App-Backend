@@ -4,6 +4,7 @@ from django.dispatch import receiver
 from django.core.mail import send_mail
 from django.conf import settings
 from django.template.loader import render_to_string
+from utils.sms_utils import send_sms
 
 from .models import HealthRecord, ReproductiveHistory
 from farms.models import FarmVet  # Use FarmVet model to get assigned vets
@@ -16,6 +17,7 @@ def send_health_record_email(sender, instance, created, **kwargs):
         owner_email = instance.animal.owner.email
         farm_vet = FarmVet.objects.filter(farm=instance.animal.farm).first()
         vet_email = farm_vet.user.email if farm_vet else None
+        owner_phone = instance.animal.owner.phone
 
         logger.info(f"Signal triggered for HealthRecord: {instance.animal.tag}, sending to Owner: {owner_email} and Vet: {vet_email or 'N/A'}")
 
@@ -47,12 +49,15 @@ def send_health_record_email(sender, instance, created, **kwargs):
                 f"Treatment: {instance.treatment or 'N/A'}"
             )
             send_mail(subject, message_owner, settings.DEFAULT_FROM_EMAIL, [owner_email], html_message=html_message_owner)
+            response = send_sms(message_owner, owner_phone)
+            print(response)  # Check the API response
 
             # Email to Vet
             if vet_email:
                 html_message_vet = render_to_string('health_record_email_vet.html', context)
                 send_mail(subject, message_owner, settings.DEFAULT_FROM_EMAIL, [vet_email], html_message=html_message_vet)
-
+                send_mail(subject, message_owner, settings.DEFAULT_FROM_EMAIL, [owner_email], html_message=html_message_owner)
+                response = send_sms(message_owner, owner_phone)
             logger.info("Health record emails sent successfully.")
         except Exception as e:
             logger.error(f"Failed to send health record email: {type(e).__name__} - {str(e)}", exc_info=True)
