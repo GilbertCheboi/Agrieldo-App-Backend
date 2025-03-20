@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'Subscriber',
     'store',
     'sheep_app',
+    'team',
     'education',
     'tasks',
     'animals.apps.AnimalsConfig',
@@ -166,14 +167,14 @@ AUTH_USER_MODEL = 'accounts.User'
 
 
 CORS_ALLOWED_ORIGINS = [
-    "http://104.248.23.245",      # Production server
-    "https://104.248.23.245",  # For HTTPS traffic
 
     "http://localhost:19000",     # React Native development server
     "http://192.168.100.4:8000",  # Local Django development server
     "http://localhost:3001",     # React Native development server
     "https://crm.agrieldo.com",
     "https://agrieldo.com",
+    "https://api.agrieldo.com",  # ✅ Must be here, since it's where frontend is talking to the backend
+    "https://www.agrieldo.com",
 
     "http://192.168.100.4:3001",  # Local Django development server
 

@@ -43,6 +43,8 @@ urlpatterns = [
     path('api/contracts/', include('contracts.urls')),  # Include calendar_app app URLs
     path('api/inventory/', include('inventory.urls')),  # Include calendar_app app URLs
     path('api/sheep_app/', include('sheep_app.urls')),  # Include calendar_app app URLs
+    path('api/team/', include('team.urls')),  # Include calendar_app app URLs
+
 
 
 
