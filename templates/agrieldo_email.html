@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #ffffff;
+      color: #333333;
+      padding: 20px;
+    }
+    h2 {
+      color: #ffa500;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #ffa500;
+      color: white;
+    }
+    .section-title {
+      margin-top: 30px;
+      font-weight: bold;
+      font-size: 18px;
+      color: #333333;
+    }
+  </style>
+</head>
+<body>
+  <h2>Agrieldo Produce Report - {{ report_date }}</h2>
+
+  {% for section in sections %}
+    <div class="section-title">{{ section.title }}</div>
+    <table>
+      <tr>
+        {% for header in section.headers %}
+          <th>{{ header }}</th>
+        {% endfor %}
+      </tr>
+      {% for row in section.rows %}
+        <tr>
+          {% for item in row %}
+            <td>{{ item }}</td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </table>
+  {% endfor %}
+</body>
+</html>
