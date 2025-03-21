@@ -17,7 +17,7 @@ def send_health_record_email(sender, instance, created, **kwargs):
         owner_email = instance.animal.owner.email
         farm_vet = FarmVet.objects.filter(farm=instance.animal.farm).first()
         vet_email = farm_vet.user.email if farm_vet else None
-        owner_phone = instance.animal.owner.phone
+        owner_phone = instance.animal.owner.phone_number
 
         logger.info(f"Signal triggered for HealthRecord: {instance.animal.tag}, sending to Owner: {owner_email} and Vet: {vet_email or 'N/A'}")
 
