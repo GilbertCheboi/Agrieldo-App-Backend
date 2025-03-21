@@ -303,7 +303,7 @@ LOGGING = {
         },
     },
     'handlers': {
-        'console': {
+                'console': {
             'class': 'logging.StreamHandler',  # Send logs to the console
             'formatter': 'verbose',  # Use the readable format
             'level': 'INFO',  # Show INFO and above (WARNING, ERROR)
