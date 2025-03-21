@@ -288,7 +288,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 import os
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles/')
-# GDAL_LIBRARY_PATH = os.getenv("GDAL_LIBRARY_PATH", "/usr/lib/libgdal.so.30")
 
 MEDIA_URL = '/media/'
 
@@ -304,7 +303,7 @@ LOGGING = {
         },
     },
     'handlers': {
-        'console': {
+                'console': {
             'class': 'logging.StreamHandler',  # Send logs to the console
             'formatter': 'verbose',  # Use the readable format
             'level': 'INFO',  # Show INFO and above (WARNING, ERROR)
