@@ -1,3 +1,4 @@
+import json
 import requests
 import logging
 from django.conf import settings
@@ -18,10 +19,12 @@ def send_sms(message, mobile):
         "mobile": mobile
     }
     
+    logging.info(f"Sending SMS with payload: {json.dumps(payload, indent=2)}")  # Log request body
+
     try:
         response = requests.post(url, json=payload, timeout=10)
         response.raise_for_status()
-        return response.json()  
+        return response.json()
     except requests.exceptions.RequestException as e:
         logging.error(f"Failed to send SMS: {e}")
         return None
