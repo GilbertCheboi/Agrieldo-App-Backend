@@ -48,8 +48,15 @@ def send_health_record_email(sender, instance, created, **kwargs):
                 f"Diagnosis: {instance.diagnosis or 'N/A'}\n"
                 f"Treatment: {instance.treatment or 'N/A'}"
             )
+            # Build the record text: always include the tag, and add the name in parentheses if available
+            record_for_text = f"Record for {instance.animal.tag}"
+            if instance.animal.name:
+                record_for_text += f" ({instance.animal.name})"
+
+            custom_message = f"Greetings, {record_for_text} has been added. Please login to your dashboard to check.\n\n"
+
             send_mail(subject, message_owner, settings.DEFAULT_FROM_EMAIL, [owner_email], html_message=html_message_owner)
-            response = send_sms(message_owner, owner_phone)
+            response = send_sms(custom_message, owner_phone)
             print(response)  # Check the API response
 
             # Email to Vet
@@ -57,7 +64,7 @@ def send_health_record_email(sender, instance, created, **kwargs):
                 html_message_vet = render_to_string('health_record_email_vet.html', context)
                 send_mail(subject, message_owner, settings.DEFAULT_FROM_EMAIL, [vet_email], html_message=html_message_vet)
                 send_mail(subject, message_owner, settings.DEFAULT_FROM_EMAIL, [owner_email], html_message=html_message_owner)
-                response = send_sms(message_owner, owner_phone)
+                response = send_sms(custom_message, owner_phone)
             logger.info("Health record emails sent successfully.")
         except Exception as e:
             logger.error(f"Failed to send health record email: {type(e).__name__} - {str(e)}", exc_info=True)
