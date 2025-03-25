@@ -1,3 +1,8 @@
+from django.core.files.base import ContentFile
+import requests
+import base64
+from io import BytesIO
+
 # animals/serializers.py
 from rest_framework import serializers
 from .models import (
@@ -61,35 +66,30 @@ class LifetimeStatsSerializer(serializers.ModelSerializer):
         fields = ['total_milk', 'avg_yield', 'calves']
 
 class AnimalSerializer(serializers.ModelSerializer):
-    images = AnimalImageSerializer(many=True, read_only=True)
-    health_records = HealthRecordSerializer(many=True, read_only=True)
-    production_data = ProductionDataSerializer(many=True, read_only=True)
-    reproductive_history = ReproductiveHistorySerializer(many=True, read_only=True)
-    feed_management = FeedManagementSerializer(many=True, read_only=True)
-    financial_details = FinancialDetailsSerializer(read_only=True)
-    lactation_status = LactationStatusSerializer(read_only=True)
-    lifetime_stats = LifetimeStatsSerializer(read_only=True)
-    farm = FarmSerializer(read_only=True)
-    category = serializers.SerializerMethodField()
-    is_pregnant = serializers.SerializerMethodField()
-    latest_milk_yield = serializers.SerializerMethodField()
+    images = AnimalImageSerializer(many=True, read_only=True)  # Read images properly
+    image = serializers.ListField(
+        child=serializers.ImageField(), write_only=True, required=False
+    )
+    caption = serializers.CharField(write_only=True, required=False)  # Single caption for all images
 
     class Meta:
         model = Animal
         fields = [
-            'tag','id', 'name', 'breed', 'dob', 'gender', 'farm', 'owner', 'assigned_worker',
-             'images', 'health_records', 'production_data',
-            'reproductive_history', 'feed_management', 'financial_details',
-            'lactation_status', 'lifetime_stats', 'category', 'is_pregnant',
-            'latest_milk_yield'
+            'tag', 'id', 'name', 'breed', 'dob', 'gender', 'farm', 'owner',
+            'assigned_worker', 'image', 'caption', 'images'
         ]
+        read_only_fields = ['owner']
 
-    def get_category(self, obj):
-        return obj.category()
+    def create(self, validated_data):
+        images = validated_data.pop("image", [])
+        caption = validated_data.pop("caption", "")  # Only one caption for all images
 
-    def get_is_pregnant(self, obj):
-        return obj.is_pregnant
+        print(f"📸 Received Images: {images}, Caption: {caption}")  # Debugging
 
-    def get_latest_milk_yield(self, obj):
-        latest_production = obj.production_data.order_by('-date').first()
-        return latest_production.milk_yield if latest_production else 0.0
+        animal = Animal.objects.create(**validated_data)
+
+        # Create AnimalImage for each image with the same caption
+        for image in images:
+            AnimalImage.objects.create(animal=animal, image=image, caption=caption)
+
+        return animal
