@@ -21,7 +21,7 @@ app.conf.beat_schedule = {
     # 🥛 Daily Milk Report - Every day at 10:00 PM
     'send-daily-milk-report-10pm': {
         'task': 'animals.tasks.send_milk_report_daily_task',
-        'schedule': crontab(minute=41, hour=12),  # 22:00 (10:00 PM daily)
+        'schedule': crontab(minute=00, hour=22),  # 22:00 (10:00 PM daily)
     },
 
     # 🐄 Animal Alerts Email - Every day at 9:00 PM

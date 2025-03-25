@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-_+dv1ec81!^iuyp&n&u77xs@qi*c37kttjf4j*-@0fhoc*)l55
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['207.154.253.97',"api.agrieldo.com",  "127.0.0.1", '192.168.100.4']
+ALLOWED_HOSTS = ['207.154.253.97',"api.agrieldo.com",  "127.0.0.1", '192.168.100.4', '0.0.0.0:8000']
 
 
 # Application definition
@@ -164,7 +164,6 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 AUTH_USER_MODEL = 'accounts.User'
-
 
 CORS_ALLOWED_ORIGINS = [
 
