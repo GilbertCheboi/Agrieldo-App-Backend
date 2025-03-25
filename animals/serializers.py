@@ -25,7 +25,7 @@ class AnimalImageSerializer(serializers.ModelSerializer):
 class HealthRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = HealthRecord
-        fields = ['id', 'animal', 'date', 'type', 'details', 'is_sick', 'clinical_signs', 'diagnosis', 'treatment']  # Updated fields
+        fields = ['id', 'animal', 'date', 'type', 'details', 'is_sick', 'clinical_signs', 'diagnosis', 'treatment', 'cost']  # Updated fields
         read_only_fields = ['id']  # ID remains read-only
 
     def validate_animal(self, value):
@@ -43,17 +43,27 @@ class ReproductiveHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ReproductiveHistory
-        fields = ['id', 'animal', 'date', 'event', 'details', 'expected_calving_date']  # Added 'id' and 'animal'
+        fields = ['id', 'animal', 'date', 'event', 'details', 'expected_calving_date', 'cost']  # Added 'id' and 'animal'
+
 class FeedManagementSerializer(serializers.ModelSerializer):
     class Meta:
         model = FeedManagement
-        fields = ['date', 'type', 'quantity']
+        fields = ['id', 'date', 'type', 'quantity', 'cost_per_unit', 'total_cost']
+        read_only_fields = ['id', 'total_cost']  # 'total_cost' is calculated in the model
+
+    def validate(self, data):
+        # Ensure quantity and cost_per_unit are non-negative
+        if data.get('quantity', 0) < 0:
+            raise serializers.ValidationError("Quantity cannot be negative.")
+        if data.get('cost_per_unit', 0) < 0:
+            raise serializers.ValidationError("Cost per unit cannot be negative.")
+        return data
+
 
 class FinancialDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = FinancialDetails
-        fields = ['feed_cost_per_month', 'vet_expenses', 'breeding_costs', 'revenue_from_milk']
-
+        fields = ['total_feed_cost', 'total_vet_cost', 'total_breeding_cost', 'total_revenue_from_milk', 'total_cost']
 class LactationStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = LactationStatus

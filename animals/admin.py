@@ -50,8 +50,7 @@ class FeedManagementAdmin(admin.ModelAdmin):
 
 @admin.register(FinancialDetails)
 class FinancialDetailsAdmin(admin.ModelAdmin):
-    list_display = ('animal', 'feed_cost_per_month', 'vet_expenses', 'breeding_costs', 'revenue_from_milk')
-    search_fields = ('animal__tag',)
+    list_display = ('animal', 'total_feed_cost', 'total_vet_cost', 'total_breeding_cost', 'total_revenue_from_milk', 'total_cost')
 
 @admin.register(LactationStatus)
 class LactationStatusAdmin(admin.ModelAdmin):

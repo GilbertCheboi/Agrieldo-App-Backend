@@ -34,6 +34,7 @@ def send_health_record_email(sender, instance, created, **kwargs):
                 'clinical_signs': instance.clinical_signs,
                 'diagnosis': instance.diagnosis,
                 'treatment': instance.treatment,
+                'cost': instance.cost,
             }
 
             # Email to Owner
@@ -47,14 +48,16 @@ def send_health_record_email(sender, instance, created, **kwargs):
                 f"Sick: {'Yes' if instance.is_sick else 'No'}\n"
                 f"Clinical Signs: {instance.clinical_signs or 'N/A'}\n"
                 f"Diagnosis: {instance.diagnosis or 'N/A'}\n"
-                f"Treatment: {instance.treatment or 'N/A'}"
+                f"Treatment: {instance.treatment or 'N/A'}\n"
+                f"Cost: {instance.cost or 'N/A'}"
+
             )
             # Build the record text: always include the tag, and add the name in parentheses if available
             record_for_text = f"a new health record for {instance.animal.tag}"
+            cost = f"({instance.cost})"
             if instance.animal.name:
                 record_for_text += f" ({instance.animal.name})"
-
-            custom_message = f"Greetings, {record_for_text} has been added. Please login to your dashboard to check.\n\n"
+            custom_message = f"Greetings, {record_for_text} has been added.\n Cost Ksh. {cost}\n Please login to your dashboard to check.\n\n"
 
             send_mail(subject, message_owner, settings.DEFAULT_FROM_EMAIL, [owner_email], html_message=html_message_owner)
             response = send_sms(custom_message, owner_phone)
@@ -90,6 +93,7 @@ def send_reproductive_record_email(sender, instance, created, **kwargs):
                 'date': instance.date,
                 'event': instance.event,
                 'details': instance.details,
+                'cost': instance.cost,
                 'expected_calving_date': instance.expected_calving_date,
             }
 
@@ -101,15 +105,19 @@ def send_reproductive_record_email(sender, instance, created, **kwargs):
                 f"Date: {instance.date}\n"
                 f"Event: {instance.event}\n"
                 f"Details: {instance.details or 'N/A'}\n"
-                f"Expected Calving Date: {instance.expected_calving_date or 'N/A'}"
+                f"Expected Calving Date: {instance.expected_calving_date or 'N/A'}\n"
+                f"Cost: {instance.cost or 'N/A'}"
+
             )
 
             # Build the record text: always include the tag, and add the name in parentheses if available
             record_for_text = f"a new reproductive health record for {instance.animal.tag}"
+            cost = f"({instance.cost})"
+
             if instance.animal.name:
                 record_for_text += f" ({instance.animal.name})"
 
-            custom_message = f"Greetings, {record_for_text} has been added. Please login to your dashboard to check.\n\n"
+            custom_message = f"Greetings, {record_for_text} has been added. \n Cost Ksh. {cost}\n  Please login to your dashboard to check.\n\n"
 
             send_mail(subject, message_owner, settings.DEFAULT_FROM_EMAIL, [owner_email], html_message=html_message_owner)
             response = send_sms(custom_message, owner_phone)

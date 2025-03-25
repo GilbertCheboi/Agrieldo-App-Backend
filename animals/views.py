@@ -7,9 +7,9 @@ from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
 
 from django.db.models import Sum
-from .models import Animal, HealthRecord, ProductionData, ReproductiveHistory
+from .models import Animal, HealthRecord, ProductionData, ReproductiveHistory, FeedManagement, FinancialDetails
 from accounts.models import User
-from .serializers import AnimalSerializer, HealthRecordSerializer, ProductionDataSerializer, ReproductiveHistorySerializer
+from .serializers import AnimalSerializer, HealthRecordSerializer, ProductionDataSerializer, ReproductiveHistorySerializer, FeedManagementSerializer, FinancialDetailsSerializer
 from datetime import timedelta
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
@@ -251,6 +251,48 @@ class ReproductiveHistoryListCreateView(generics.ListCreateAPIView):
             animal = Animal.objects.get(id=animal_id)
             instance = serializer.save(animal=animal)
             logger.info(f"Created ReproductiveHistory: {instance.id}")
+        except Animal.DoesNotExist:
+            logger.error(f"Animal with ID {animal_id} not found")
+            raise serializers.ValidationError({"animal": "Animal does not exist."})
+
+class FeedManagementListCreateView(generics.ListCreateAPIView):
+    queryset = FeedManagement.objects.all()
+    serializer_class = FeedManagementSerializer
+    permission_classes = [RoleBasedPermission]  # Adjust as needed
+
+    def perform_create(self, serializer):
+        logger.info(f"FeedManagement POST data: {self.request.data}")
+        animal_id = self.request.data.get('animal')
+        if not animal_id:
+            logger.error("No animal ID provided")
+            raise serializers.ValidationError({"animal": "This field is required."})
+        try:
+            animal = Animal.objects.get(id=animal_id)
+            instance = serializer.save(animal=animal)
+            logger.info(f"Created FeedManagement: {instance.id}")
+        except Animal.DoesNotExist:
+            logger.error(f"Animal with ID {animal_id} not found")
+            raise serializers.ValidationError({"animal": "Animal does not exist."})
+
+class FinancialDetailsListCreateView(generics.ListCreateAPIView):
+    queryset = FinancialDetails.objects.all()
+    serializer_class = FinancialDetailsSerializer
+    permission_classes = [RoleBasedPermission]  # Adjust as needed
+
+    def perform_create(self, serializer):
+        logger.info(f"FinancialDetails POST data: {self.request.data}")
+        animal_id = self.request.data.get('animal')
+        if not animal_id:
+            logger.error("No animal ID provided")
+            raise serializers.ValidationError({"animal": "This field is required."})
+        try:
+            animal = Animal.objects.get(id=animal_id)
+            # Check if FinancialDetails already exists for this animal (since it's OneToOne)
+            if FinancialDetails.objects.filter(animal=animal).exists():
+                logger.error(f"FinancialDetails already exists for animal {animal_id}")
+                raise serializers.ValidationError({"animal": "Financial details already exist for this animal."})
+            instance = serializer.save(animal=animal)
+            logger.info(f"Created FinancialDetails: {instance.id}")
         except Animal.DoesNotExist:
             logger.error(f"Animal with ID {animal_id} not found")
             raise serializers.ValidationError({"animal": "Animal does not exist."})

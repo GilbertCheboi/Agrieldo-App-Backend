@@ -4,11 +4,14 @@ from datetime import timedelta
 from farms.models import Farm  # Import Farm from farms app
 from django.conf import settings
 from django.utils import timezone
-
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 from django.conf import settings
+from decimal import Decimal
+
 
 class Animal(models.Model):
     tag = models.CharField(max_length=50, unique=True)
@@ -83,13 +86,13 @@ class HealthRecord(models.Model):
     type = models.CharField(max_length=50)
     details = models.TextField()
     is_sick = models.BooleanField(default=False)
-    clinical_signs = models.TextField(blank=True, null=True)  # New field
-    diagnosis = models.TextField(blank=True, null=True)      # New field
-    treatment = models.TextField(blank=True, null=True)      # New field
+    clinical_signs = models.TextField(blank=True, null=True)
+    diagnosis = models.TextField(blank=True, null=True)
+    treatment = models.TextField(blank=True, null=True)
+    cost = models.FloatField(default=0.0, help_text="Cost of this health record (e.g., vet fees, medication)")  # New field
 
     def __str__(self):
         return f"{self.date} - {self.type}"
-
 
 class ProductionData(models.Model):
     # Define session choices as a tuple of tuples
@@ -117,6 +120,7 @@ class ReproductiveHistory(models.Model):
     date = models.DateField()
     event = models.CharField(max_length=50)
     details = models.TextField(blank=True, null=True)
+    cost = models.FloatField(default=0.0, help_text="Cost of this reproductive event (e.g., AI fees, breeding fees)")  # New field
 
     def __str__(self):
         return f"{self.date} - {self.event}"
@@ -131,24 +135,60 @@ class ReproductiveHistory(models.Model):
             return self.date + timedelta(days=280)
         return None
 
+
 class FeedManagement(models.Model):
     animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='feed_management')
     date = models.DateField()
     type = models.CharField(max_length=50)
-    quantity = models.CharField(max_length=20)
+    quantity = models.FloatField(help_text="Quantity of feed in kg")  # Changed to FloatField for precision
+    cost_per_unit = models.FloatField(default=0.0, help_text="Cost per kg of feed")  # New field
+    total_cost = models.FloatField(default=0.0, help_text="Total cost for this feed entry (quantity * cost_per_unit)")  # New field
+
+    def save(self, *args, **kwargs):
+        # Automatically calculate total_cost before saving
+        self.total_cost = self.quantity * self.cost_per_unit
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.date} - {self.type}"
 
-class FinancialDetails(models.Model):
-    animal = models.OneToOneField(Animal, on_delete=models.CASCADE, related_name='financial_details')
-    feed_cost_per_month = models.FloatField()
-    vet_expenses = models.FloatField()
-    breeding_costs = models.FloatField()
-    revenue_from_milk = models.FloatField()
 
-    def __str__(self):
-        return f"Financials for {self.animal.tag}"
+class FinancialDetails(models.Model):
+    animal = models.OneToOneField(Animal, on_delete=models.CASCADE, related_name="financial_details")
+    total_feed_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    total_vet_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    total_breeding_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    total_revenue_from_milk = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    total_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+
+@receiver(post_save, sender=Animal)
+def create_financial_details(sender, instance, created, **kwargs):
+    if created:
+        FinancialDetails.objects.get_or_create(animal=instance)
+
+@receiver(post_save, sender=HealthRecord)
+def update_financial_details_health(sender, instance, created, **kwargs):
+    if created:
+        financial, _ = FinancialDetails.objects.get_or_create(animal=instance.animal)
+        financial.total_vet_cost += Decimal(str(instance.cost))  # Convert to Decimal
+        financial.total_cost += Decimal(str(instance.cost))      # Convert to Decimal
+        financial.save()
+
+@receiver(post_save, sender=ReproductiveHistory)
+def update_financial_details_reproduction(sender, instance, created, **kwargs):
+    if created:
+        financial, _ = FinancialDetails.objects.get_or_create(animal=instance.animal)
+        if instance.event in ["AI", "Natural Breeding"]:
+            financial.total_breeding_cost += Decimal(str(instance.cost))  # Convert to Decimal
+            financial.total_cost += Decimal(str(instance.cost))           # Convert to Decimal
+        financial.save()
+@receiver(post_save, sender=FeedManagement)
+def update_financial_details_feed(sender, instance, created, **kwargs):
+    if created:
+        financial, _ = FinancialDetails.objects.get_or_create(animal=instance.animal)
+        financial.total_feed_cost += Decimal(str(instance.total_cost))  # Use total_cost from FeedManagement
+        financial.total_cost += Decimal(str(instance.total_cost))
+        financial.save()
 
 class LactationStatus(models.Model):
     animal = models.OneToOneField('Animal', on_delete=models.CASCADE, related_name='lactation_status')

@@ -9,7 +9,9 @@ from .views import (
     ProductionDataListCreateView,
     HealthRecordListCreateView,
     ReproductiveHistoryListCreateView,
-    AnimalListCreateView
+    AnimalListCreateView,
+    FinancialDetailsListCreateView,
+    FeedManagementListCreateView
 )
 
 urlpatterns = [
@@ -24,5 +26,6 @@ urlpatterns = [
     path('health-records/', HealthRecordListCreateView.as_view(), name='health-records-list-create'),
     path('reproductive-history/', ReproductiveHistoryListCreateView.as_view(), name='reproductive-history-list-create'),
     path('add/', AnimalListCreateView.as_view(), name='animal-list-create'),
-
+    path('financial/', FinancialDetailsListCreateView.as_view(), name='financial_list_create'),
+    path('feed-management/', FeedManagementListCreateView.as_view(), name='feed_list_create'),
 ]
