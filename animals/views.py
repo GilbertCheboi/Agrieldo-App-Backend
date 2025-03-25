@@ -1,7 +1,11 @@
+from rest_framework import serializers  
+from rest_framework.generics import ListCreateAPIView
 from rest_framework import generics, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser
+
 from django.db.models import Sum
 from .models import Animal, HealthRecord, ProductionData, ReproductiveHistory
 from accounts.models import User
@@ -10,12 +14,44 @@ from datetime import timedelta
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
-
+from .models import ( AnimalImage)
 import logging
 
 logger = logging.getLogger(__name__)
 
 from farms.models import Farm
+class AnimalListCreateView(ListCreateAPIView):
+    serializer_class = AnimalSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)  # ✅ Ensure proper parsing of images
+
+    def get_queryset(self):
+        """Return only animals belonging to the authenticated user."""
+        farm_id = self.request.query_params.get("farm_id", None)
+        queryset = Animal.objects.filter(owner=self.request.user)
+        if farm_id:
+            queryset = queryset.filter(farm_id=farm_id)
+        return queryset
+
+    def perform_create(self, serializer):
+        """Assign the authenticated user as the owner before saving."""
+        farm_id = self.request.data.get("farm")
+
+        # ✅ Validate farm ownership
+        if not farm_id or not Farm.objects.filter(id=farm_id, owner=self.request.user).exists():
+            raise serializers.ValidationError({"farm": "Invalid or unauthorized farm ID."})
+
+        # ✅ Save animal with owner
+        animal = serializer.save(owner=self.request.user)
+
+        # ✅ Handle image uploads
+        images = self.request.FILES.getlist("images")  # Ensure images are received
+        if images:
+            for image in images:
+                AnimalImage.objects.create(animal=animal, image=image)
+
+        return animal  # ✅ Return the created instance
+
 # Custom Permission Class
 class RoleBasedPermission(permissions.BasePermission):
     def has_permission(self, request, view):
