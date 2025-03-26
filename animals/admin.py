@@ -2,7 +2,7 @@
 from django.contrib import admin
 from .models import (
     Animal, AnimalImage, HealthRecord, ProductionData, ReproductiveHistory,
-    FeedManagement, FinancialDetails, LactationStatus, LifetimeStats
+    FeedManagement, FinancialDetails, LactationPeriod, LifetimeStats
 )
 
 @admin.register(Animal)
@@ -52,11 +52,19 @@ class FeedManagementAdmin(admin.ModelAdmin):
 class FinancialDetailsAdmin(admin.ModelAdmin):
     list_display = ('animal', 'total_feed_cost', 'total_vet_cost', 'total_breeding_cost', 'total_revenue_from_milk', 'total_cost')
 
-@admin.register(LactationStatus)
-class LactationStatusAdmin(admin.ModelAdmin):
-    list_display = ('animal', 'lactation_number', 'days_in_milk', 'is_milking')
-    list_filter = ('is_milking',)
-    search_fields = ('animal__tag',)
+@admin.register(LactationPeriod)
+class LactationPeriodAdmin(admin.ModelAdmin):
+    list_display = ('animal_tag', 'lactation_number', 'last_calving_date', 'days_in_milk', 'is_milking', 'expected_calving_date')
+    list_filter = ('is_milking', 'animal__farm')
+    search_fields = ('animal__tag', 'lactation_number')
+    date_hierarchy = 'last_calving_date'
+    readonly_fields = ('days_in_milk',)  # Computed field
+
+    def animal_tag(self, obj):
+        return obj.animal.tag
+    animal_tag.short_description = 'Animal Tag'
+    animal_tag.admin_order_field = 'animal__tag'  # Allow sorting by tag
+
 
 @admin.register(LifetimeStats)
 class LifetimeStatsAdmin(admin.ModelAdmin):

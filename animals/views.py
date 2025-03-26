@@ -5,11 +5,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
-
+from django.shortcuts import get_object_or_404
 from django.db.models import Sum
-from .models import Animal, HealthRecord, ProductionData, ReproductiveHistory, FeedManagement, FinancialDetails
+from .models import Animal, HealthRecord, ProductionData, ReproductiveHistory, FeedManagement, FinancialDetails, LactationPeriod
 from accounts.models import User
-from .serializers import AnimalSerializer, HealthRecordSerializer, ProductionDataSerializer, ReproductiveHistorySerializer, FeedManagementSerializer, FinancialDetailsSerializer
+from .serializers import AnimalSerializer, HealthRecordSerializer, ProductionDataSerializer, ReproductiveHistorySerializer, FeedManagementSerializer, FinancialDetailsSerializer, LactationPeriodSerializer
 from datetime import timedelta
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
@@ -189,7 +189,7 @@ class AnimalListView(generics.ListAPIView):
 
         return Animal.objects.filter(farm__id__in=accessible_farm_ids).prefetch_related(
             'images', 'health_records', 'production_data', 'reproductive_history',
-            'feed_management', 'financial_details', 'lactation_status', 'lifetime_stats', 'farm'
+            'feed_management', 'financial_details', 'lactation_periods', 'lifetime_stats', 'farm'
         )
 
 class AnimalDetailView(generics.RetrieveAPIView):
@@ -206,7 +206,7 @@ class AnimalDetailView(generics.RetrieveAPIView):
 
         return Animal.objects.filter(farm__id__in=accessible_farm_ids).prefetch_related(
             'images', 'health_records', 'production_data', 'reproductive_history',
-            'feed_management', 'financial_details', 'lactation_status', 'lifetime_stats', 'farm'
+            'feed_management', 'financial_details', 'lactation_periods', 'lifetime_stats', 'farm'
         )
 
 
@@ -296,3 +296,18 @@ class FinancialDetailsListCreateView(generics.ListCreateAPIView):
         except Animal.DoesNotExist:
             logger.error(f"Animal with ID {animal_id} not found")
             raise serializers.ValidationError({"animal": "Animal does not exist."})
+
+
+
+class LactationPeriodListCreateView(generics.ListCreateAPIView):
+    serializer_class = LactationPeriodSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        animal_id = self.kwargs.get('animal_id')
+        return LactationPeriod.objects.filter(animal__id=animal_id, animal__owner=self.request.user)
+
+    def perform_create(self, serializer):
+        animal_id = self.kwargs.get('animal_id')
+        animal = get_object_or_404(Animal, id=animal_id, owner=self.request.user)
+        serializer.save(animal=animal)

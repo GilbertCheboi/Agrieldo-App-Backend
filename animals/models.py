@@ -31,20 +31,55 @@ class Animal(models.Model):
         return self.tag
 
     def category(self):
-        lactation = self.lactation_status if hasattr(self, 'lactation_status') else None
-        repro_history = self.reproductive_history.order_by('-date').first() if self.reproductive_history.exists() else None
+        # Calculate age in months
         age_months = (timezone.now().date() - self.dob).days / 30
 
+        # Get the latest lactation period (if any)
+        latest_lactation = self.lactation_periods.order_by('-last_calving_date').first() if self.lactation_periods.exists() else None
+
+        # Get the latest reproductive event
+        repro_history = self.reproductive_history.order_by('-date').first() if self.reproductive_history.exists() else None
+
+        # Male animals
         if self.gender == "Male":
             return "Bull"
-        elif age_months < 6:
-            return "Calf"
-        elif not lactation or lactation.lactation_number == 0:
-            return "Heifer"
-        elif lactation and lactation.is_milking:
-            return "Milking"
-        elif lactation and not lactation.is_milking:
-            return "Dry"
+
+        # Age-based categories for young females
+        if age_months < 3:
+            return "Calf (0-3 months)"
+        elif 3 <= age_months < 6:
+            return "Weaner Stage 1 (3-6 months)"
+        elif 6 <= age_months < 9:
+            return "Weaner Stage 2 (6-9 months)"
+        elif 9 <= age_months < 12:
+            return "Yearling (9-12 months)"
+        elif 12 <= age_months < 15:
+            return "Bulling (12-15 months)"
+
+        # Beyond 15 months, use reproductive and lactation status
+        if repro_history and self.is_pregnant:
+            if latest_lactation and latest_lactation.expected_calving_date:
+                days_to_calving = (latest_lactation.expected_calving_date - timezone.now().date()).days
+                if 0 < days_to_calving <= 30:
+                    return "Steaming"  # One month before calving
+            return "In-Calf"  # Pregnant but not near calving
+
+        # Lactation-based categories
+        if latest_lactation:
+            if latest_lactation.lactation_number == 0:  # Rare edge case
+                return "Heifer"
+            elif latest_lactation.is_milking:
+                dim = latest_lactation.days_in_milk
+                if dim <= 100:
+                    return "Early Lactating"
+                elif 101 <= dim <= 200:
+                    return "Mid Lactating"
+                else:  # dim > 200
+                    return "Late Lactating"
+            else:
+                return "Dry"
+
+        # Default for females over 15 months with no lactation or pregnancy
         return "Heifer"
 
     @property
@@ -52,7 +87,7 @@ class Animal(models.Model):
         if not self.reproductive_history.exists():
             return False
         latest_event = self.reproductive_history.order_by('-date').first()
-        if latest_event.is_pregnancy_start:
+        if latest_event.event in ["AI", "Natural Breeding"]:  # Adjust if using is_pregnancy_start
             calving_after = self.reproductive_history.filter(
                 event="Calving",
                 date__gt=latest_event.date
@@ -67,6 +102,7 @@ class Animal(models.Model):
             is_sick=True,
             date__gte=recent_threshold
         ).exists()
+
 
 
 class AnimalImage(models.Model):
@@ -190,24 +226,26 @@ def update_financial_details_feed(sender, instance, created, **kwargs):
         financial.total_cost += Decimal(str(instance.total_cost))
         financial.save()
 
-class LactationStatus(models.Model):
-    animal = models.OneToOneField('Animal', on_delete=models.CASCADE, related_name='lactation_status')
+class LactationPeriod(models.Model):  # Renamed for clarity
+    animal = models.ForeignKey('Animal', on_delete=models.CASCADE, related_name='lactation_periods')
     lactation_number = models.IntegerField()
-    days_in_milk = models.IntegerField(editable=False)  # Read-only, computed
+    last_calving_date = models.DateField()  # Date of calving that started this period
+    days_in_milk = models.IntegerField(editable=False)  # Computed from last_calving_date
     is_milking = models.BooleanField(default=True)
-    last_calving_date = models.DateField(null=True, blank=True)  # Date of last calving
-    expected_calving_date = models.DateField(null=True, blank=True)  # EDC
+    expected_calving_date = models.DateField(null=True, blank=True)  # EDC for next calving
+    end_date = models.DateField(null=True, blank=True)  # When this lactation period ends (optional)
 
     def save(self, *args, **kwargs):
         # Update days_in_milk from last_calving_date
         if self.last_calving_date:
             self.days_in_milk = (timezone.now().date() - self.last_calving_date).days
         else:
-            self.days_in_milk = 0  # Default if no calving yet
-        
-        # Update expected_calving_date from latest pregnancy start
+            self.days_in_milk = 0
+
+        # Update expected_calving_date from latest breeding after this calving
         latest_breeding = self.animal.reproductive_history.filter(
-            event__in=["AI", "Natural Breeding"]
+            event__in=["AI", "Natural Breeding"],
+            date__gt=self.last_calving_date
         ).order_by('-date').first()
         if latest_breeding and not self.animal.reproductive_history.filter(
             event="Calving", date__gt=latest_breeding.date
@@ -216,16 +254,23 @@ class LactationStatus(models.Model):
         else:
             self.expected_calving_date = None
 
+        # Set is_milking to False if within 60 days of expected calving
+        if self.expected_calving_date:
+            days_to_calving = (self.expected_calving_date - timezone.now().date()).days
+            if days_to_calving <= 60 and self.is_milking:
+                self.is_milking = False
+            elif days_to_calving > 60 and not self.is_milking:
+                self.is_milking = True
+
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Lactation {self.lactation_number} - {self.days_in_milk} DIM"
+        return f"Lactation {self.lactation_number} - {self.days_in_milk} DIM for {self.animal.tag}"
 
     @property
     def current_days_in_milk(self):
         if self.last_calving_date:
             return (timezone.now().date() - self.last_calving_date).days
-        return self.days_in_milk
 
 class LifetimeStats(models.Model):
     animal = models.OneToOneField(Animal, on_delete=models.CASCADE, related_name='lifetime_stats')

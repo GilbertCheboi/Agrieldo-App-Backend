@@ -184,6 +184,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 
+# Allow credentials (if using tokens/cookies)
 
 AUTH_PASSWORD_VALIDATORS = [
     {

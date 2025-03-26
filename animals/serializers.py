@@ -2,7 +2,7 @@
 from rest_framework import serializers
 from .models import (
     Animal, AnimalImage, HealthRecord, ProductionData, ReproductiveHistory,
-    FeedManagement, FinancialDetails, LactationStatus, LifetimeStats
+    FeedManagement, FinancialDetails, LactationPeriod, LifetimeStats
 )
 from farms.models import Farm
 
@@ -59,16 +59,17 @@ class FinancialDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = FinancialDetails
         fields = ['total_feed_cost', 'total_vet_cost', 'total_breeding_cost', 'total_revenue_from_milk', 'total_cost']
-class LactationStatusSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = LactationStatus
-        fields = ['lactation_number', 'days_in_milk', 'is_milking', 'last_calving_date', 'expected_calving_date']
 
+class LactationPeriodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LactationPeriod
+        fields = ['id', 'lactation_number', 'days_in_milk', 'is_milking', 'last_calving_date', 'expected_calving_date', 'end_date']
 
 class LifetimeStatsSerializer(serializers.ModelSerializer):
     class Meta:
         model = LifetimeStats
         fields = ['total_milk', 'avg_yield', 'calves']
+
 
 class AnimalSerializer(serializers.ModelSerializer):
     images = AnimalImageSerializer(many=True, read_only=True)
@@ -77,20 +78,19 @@ class AnimalSerializer(serializers.ModelSerializer):
     reproductive_history = ReproductiveHistorySerializer(many=True, read_only=True)
     feed_management = FeedManagementSerializer(many=True, read_only=True)
     financial_details = FinancialDetailsSerializer(read_only=True)
-    lactation_status = LactationStatusSerializer(read_only=True)
+    lactation_periods = LactationPeriodSerializer(many=True, read_only=True)
     lifetime_stats = LifetimeStatsSerializer(read_only=True)
     farm = FarmSerializer(read_only=True)
     category = serializers.SerializerMethodField()
     is_pregnant = serializers.SerializerMethodField()
     latest_milk_yield = serializers.SerializerMethodField()
-
     class Meta:
         model = Animal
         fields = [
             'tag','id', 'name', 'breed', 'dob', 'gender', 'farm', 'owner', 'assigned_worker',
              'images', 'health_records', 'production_data',
             'reproductive_history', 'feed_management', 'financial_details',
-            'lactation_status', 'lifetime_stats', 'category', 'is_pregnant',
+            'lactation_periods', 'lifetime_stats', 'category', 'is_pregnant',
             'latest_milk_yield'
         ]
 
