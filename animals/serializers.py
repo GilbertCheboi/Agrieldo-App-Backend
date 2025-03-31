@@ -31,7 +31,23 @@ class HealthRecordSerializer(serializers.ModelSerializer):
 class ProductionDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductionData
-        fields = ['animal', 'id', 'date', 'session', 'milk_yield', 'feed_consumption', 'scc', 'fat_percentage', 'protein_percentage']
+        fields = ['animal', 'id', 'date', 'session', 'milk_yield', 'milk_price_per_liter', 'feed_consumption', 'scc', 'fat_percentage', 'protein_percentage']
+        read_only_fields = ['id']  # ID is auto-generated, should not be writable
+
+    def validate(self, data):
+        # Optional: Add custom validation if needed
+        return data
+
+
+class DailyProductionSummarySerializer(serializers.Serializer):
+    date = serializers.DateField()
+    total_milk_yield = serializers.FloatField()
+    avg_price_per_liter = serializers.DecimalField(max_digits=6, decimal_places=2)
+    total_feed_consumption = serializers.FloatField()
+    avg_scc = serializers.FloatField()
+    avg_fat_percentage = serializers.FloatField()
+    avg_protein_percentage = serializers.FloatField()
+
 
 class ReproductiveHistorySerializer(serializers.ModelSerializer):
     expected_calving_date = serializers.DateField(read_only=True)

@@ -273,8 +273,7 @@ class DailyMilkProductionSummaryView(APIView):
         return Response(serializer.data)
 
 
-import logging
-logger = logging.getLogger(__name__)
+
 
 class ProductionDataListCreateView(generics.ListCreateAPIView):
     queryset = ProductionData.objects.all()

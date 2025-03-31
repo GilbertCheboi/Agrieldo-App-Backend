@@ -11,6 +11,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.conf import settings
 from decimal import Decimal
+import logging
 
 
 class Animal(models.Model):
@@ -31,20 +32,26 @@ class Animal(models.Model):
         return self.tag
 
     def category(self):
+        """
+        Categorizes the animal based on its age, reproductive status, and lactation status.
+        """
         # Calculate age in months
         age_months = (timezone.now().date() - self.dob).days / 30
+        print(f"Debug: {self.tag} - Age in months: {age_months}")
 
-        # Get the latest lactation period (if any)
+        # Get latest lactation and reproductive event
         latest_lactation = self.lactation_periods.order_by('-last_calving_date').first() if self.lactation_periods.exists() else None
+        latest_repro_event = self.reproductive_history.order_by('-date').first() if self.reproductive_history.exists() else None
 
-        # Get the latest reproductive event
-        repro_history = self.reproductive_history.order_by('-date').first() if self.reproductive_history.exists() else None
+        # Debugging
+        print(f"Debug: {self.tag} - Latest Lactation: {latest_lactation}")
+        print(f"Debug: {self.tag} - Latest Reproductive Event: {latest_repro_event}")
 
-        # Male animals
+        # Males
         if self.gender == "Male":
             return "Bull"
 
-        # Age-based categories for young females
+        # Young Female Stages
         if age_months < 3:
             return "Calf (0-3 months)"
         elif 3 <= age_months < 6:
@@ -56,53 +63,60 @@ class Animal(models.Model):
         elif 12 <= age_months < 15:
             return "Bulling (12-15 months)"
 
-        # Beyond 15 months, use reproductive and lactation status
-        if repro_history and self.is_pregnant:
+        # Prioritize Lactation Status Over Pregnancy
+        if latest_lactation and latest_lactation.is_milking:
+            dim = latest_lactation.days_in_milk
+            print(f"Debug: {self.tag} - Milking: {latest_lactation.is_milking}, DIM: {dim}")
+
+            if dim <= 100:
+                return "Early Lactating"
+            elif 101 <= dim <= 200:
+                return "Mid Lactating"
+            else:
+                return "Late Lactating"
+
+        # Pregnancy Status
+        if latest_repro_event and self.is_pregnant:
             if latest_lactation and latest_lactation.expected_calving_date:
                 days_to_calving = (latest_lactation.expected_calving_date - timezone.now().date()).days
+                print(f"Debug: {self.tag} - Days to Calving: {days_to_calving}")
+
                 if 0 < days_to_calving <= 30:
-                    return "Steaming"  # One month before calving
-            return "In-Calf"  # Pregnant but not near calving
+                    return "Steaming"  # Close to calving
+            return "In-Calf"
 
-        # Lactation-based categories
-        if latest_lactation:
-            if latest_lactation.lactation_number == 0:  # Rare edge case
-                return "Heifer"
-            elif latest_lactation.is_milking:
-                dim = latest_lactation.days_in_milk
-                if dim <= 100:
-                    return "Early Lactating"
-                elif 101 <= dim <= 200:
-                    return "Mid Lactating"
-                else:  # dim > 200
-                    return "Late Lactating"
-            else:
-                return "Dry"
-
-        # Default for females over 15 months with no lactation or pregnancy
+        # Default to Heifer if no other category fits
         return "Heifer"
 
     @property
     def is_pregnant(self):
+        """
+        Determines if the animal is pregnant by checking its reproductive history.
+        """
         if not self.reproductive_history.exists():
             return False
         latest_event = self.reproductive_history.order_by('-date').first()
-        if latest_event.event in ["AI", "Natural Breeding"]:  # Adjust if using is_pregnancy_start
+        print(f"Debug: {self.tag} - Latest reproductive event: {latest_event.date} - {latest_event.event}")
+
+        if latest_event.event in ["AI", "Natural Breeding"]:
             calving_after = self.reproductive_history.filter(
                 event="Calving",
                 date__gt=latest_event.date
             ).exists()
+            print(f"Debug: {self.tag} - Calving after last breeding: {calving_after}")
             return not calving_after
         return False
 
     @property
     def is_sick(self):
+        """
+        Checks if the animal has been marked as sick within the last 30 days.
+        """
         recent_threshold = timezone.now().date() - timedelta(days=30)
         return self.health_records.filter(
             is_sick=True,
             date__gte=recent_threshold
         ).exists()
-
 
 
 class AnimalImage(models.Model):
@@ -142,10 +156,12 @@ class ProductionData(models.Model):
     date = models.DateField()
     session = models.CharField(max_length=10, choices=SESSION_CHOICES, default='MORNING')
     milk_yield = models.FloatField()
-    feed_consumption = models.FloatField()
-    scc = models.IntegerField()
-    fat_percentage = models.FloatField()
-    protein_percentage = models.FloatField()
+    milk_price_per_liter = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('0.00'))  # New field
+
+    feed_consumption = models.FloatField(blank= True, null=True)
+    scc = models.IntegerField(blank=True, null=True)
+    fat_percentage = models.FloatField(null=True, blank=True)
+    protein_percentage = models.FloatField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.date} - {self.session} - {self.milk_yield}L"
@@ -176,7 +192,7 @@ class FeedManagement(models.Model):
     animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='feed_management')
     date = models.DateField()
     type = models.CharField(max_length=50)
-    quantity = models.FloatField(help_text="Quantity of feed in kg")  # Changed to FloatField for precision
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)
     cost_per_unit = models.FloatField(default=0.0, help_text="Cost per kg of feed")  # New field
     total_cost = models.FloatField(default=0.0, help_text="Total cost for this feed entry (quantity * cost_per_unit)")  # New field
 
@@ -190,12 +206,13 @@ class FeedManagement(models.Model):
 
 
 class FinancialDetails(models.Model):
-    animal = models.OneToOneField(Animal, on_delete=models.CASCADE, related_name="financial_details")
-    total_feed_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
-    total_vet_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
-    total_breeding_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
-    total_revenue_from_milk = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
-    total_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    animal = models.OneToOneField('Animal', on_delete=models.CASCADE, related_name="financial_details")
+    total_feed_cost = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    total_vet_cost = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    total_breeding_cost = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    total_revenue_from_milk = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    total_cost = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+
 
 @receiver(post_save, sender=Animal)
 def create_financial_details(sender, instance, created, **kwargs):
@@ -206,24 +223,44 @@ def create_financial_details(sender, instance, created, **kwargs):
 def update_financial_details_health(sender, instance, created, **kwargs):
     if created:
         financial, _ = FinancialDetails.objects.get_or_create(animal=instance.animal)
-        financial.total_vet_cost += Decimal(str(instance.cost))  # Convert to Decimal
-        financial.total_cost += Decimal(str(instance.cost))      # Convert to Decimal
-        financial.save()
-
+        cost = Decimal(str(instance.cost))  # Convert float to Decimal
+        financial.total_vet_cost += cost
+        financial.total_cost += cost
+        financial.save()  
 @receiver(post_save, sender=ReproductiveHistory)
 def update_financial_details_reproduction(sender, instance, created, **kwargs):
     if created:
         financial, _ = FinancialDetails.objects.get_or_create(animal=instance.animal)
         if instance.event in ["AI", "Natural Breeding"]:
-            financial.total_breeding_cost += Decimal(str(instance.cost))  # Convert to Decimal
-            financial.total_cost += Decimal(str(instance.cost))           # Convert to Decimal
+            cost = Decimal(str(instance.cost))  # Convert float to Decimal
+            financial.total_breeding_cost += cost
+            financial.total_cost += cost
         financial.save()
-@receiver(post_save, sender=FeedManagement)
+
+logger = logging.getLogger(__name__)
+
+@receiver(post_save, sender='animals.FeedManagement')
 def update_financial_details_feed(sender, instance, created, **kwargs):
     if created:
         financial, _ = FinancialDetails.objects.get_or_create(animal=instance.animal)
-        financial.total_feed_cost += Decimal(str(instance.total_cost))  # Use total_cost from FeedManagement
-        financial.total_cost += Decimal(str(instance.total_cost))
+        total_cost = Decimal(f'{instance.total_cost:.2f}')  # float to Decimal
+        logger.info(f"total_cost: {total_cost}, type: {type(total_cost)}")
+        logger.info(f"total_feed_cost: {financial.total_feed_cost}, type: {type(financial.total_feed_cost)}")
+        # Ensure total_feed_cost is Decimal
+        if not isinstance(financial.total_feed_cost, Decimal):
+            financial.total_feed_cost = Decimal(f'{float(financial.total_feed_cost):.2f}')
+        if not isinstance(financial.total_cost, Decimal):
+            financial.total_cost = Decimal(f'{float(financial.total_cost):.2f}')
+        financial.total_feed_cost += total_cost
+        financial.total_cost += total_cost
+        financial.save()
+
+@receiver(post_save, sender=ProductionData)
+def update_financial_details_milk(sender, instance, created, **kwargs):
+    if created:
+        financial, _ = FinancialDetails.objects.get_or_create(animal=instance.animal)
+        revenue = Decimal(instance.milk_yield) * instance.milk_price_per_liter  # Calculate revenue
+        financial.total_revenue_from_milk += revenue
         financial.save()
 
 class LactationPeriod(models.Model):  # Renamed for clarity

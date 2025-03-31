@@ -6,17 +6,56 @@ from .serializers import FeedSerializer
 from animals.models import Animal, FeedManagement
 from datetime import date
 
-class FeedListCreateView(generics.ListCreateAPIView):  # Changed to ListCreateAPIView
+import logging
+logger = logging.getLogger('feed')  # Use your app name here
+
+
+
+class FeedListCreateView(generics.ListCreateAPIView):
     serializer_class = FeedSerializer
 
     def get_queryset(self):
         return Feed.objects.filter(owner=self.request.user)
 
-    def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+    def create(self, request, *args, **kwargs):
+        """Override create to handle top-ups without serializer validation."""
+        name = request.data.get('name')
+        quantity_kg = request.data.get('quantity_kg')
+        price_per_kg = request.data.get('price_per_kg')
+
+        logger.debug(f"Received data: {request.data}")
+
+        try:
+            quantity_kg = float(quantity_kg)
+            price_per_kg = float(price_per_kg) if price_per_kg is not None else None
+            owner = request.user
+
+            feed = Feed.objects.filter(name=name, owner=owner).first()
+
+            if feed:
+                # Top-up: Bypass serializer, update directly
+                feed.add_feed(quantity_kg, price_per_kg)
+                feed_serializer = FeedSerializer(feed, context={'request': request})
+                logger.debug(f"Feed topped up: {feed_serializer.data}")
+                return Response(feed_serializer.data, status=status.HTTP_200_OK)
+            else:
+                # New feed: Use serializer for validation and creation
+                serializer = self.get_serializer(data=request.data)
+                serializer.is_valid(raise_exception=True)
+                feed = serializer.save(owner=owner, quantity_kg=quantity_kg, price_per_kg=price_per_kg)
+                logger.debug(f"New feed created: {feed}")
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        except ValueError as e:
+            logger.error(f"ValueError: {e}")
+            return Response({"error": "Invalid quantity or price"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class FeedAnimalsView(APIView):
     def post(self, request):
+        
         category = request.data.get('category')
         feed_id = request.data.get('feed_id')
         quantity_per_animal = request.data.get('quantity_per_animal')

@@ -28,7 +28,7 @@ class HealthRecordAdmin(admin.ModelAdmin):
 
 @admin.register(ProductionData)
 class ProductionDataAdmin(admin.ModelAdmin):
-    list_display = ('animal', 'date', 'session', 'milk_yield', 'feed_consumption', 'scc', 'fat_percentage', 'protein_percentage')
+    list_display = ('animal', 'date', 'session', 'milk_yield','milk_price_per_liter', 'feed_consumption', 'scc', 'fat_percentage', 'protein_percentage')
     list_filter = ('date', 'session')
     search_fields = ('animal__tag',)
     date_hierarchy = 'date'

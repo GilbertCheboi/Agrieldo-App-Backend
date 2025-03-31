@@ -10,7 +10,10 @@ from .views import (
     AnimalListCreateView,
     FinancialDetailsListCreateView,
     FeedManagementListCreateView,
-    LactationPeriodListCreateView  # Added
+    LactationPeriodListCreateView,  # Added
+    MilkProductionCreateView,
+    LactatingAnimalsListView,
+    DailyMilkProductionSummaryView
 )
 
 urlpatterns = [
@@ -27,4 +30,8 @@ urlpatterns = [
     path('feed-management/', FeedManagementListCreateView.as_view(), name='feed_list_create'),
     path('lactation/<int:animal_id>/', LactationPeriodListCreateView.as_view(), name='lactation-list-create'),  # Must be here    
     # Lactation Period View
+    path('production/milk/', ProductionDataListCreateView.as_view(), name='milk-production'),
+    path('production/milk/lactating-animals/', LactatingAnimalsListView.as_view(), name='lactating-animals'),
+    path('production/daily-summary/', DailyMilkProductionSummaryView.as_view(), name='daily-production-summary'),
+
 ]
