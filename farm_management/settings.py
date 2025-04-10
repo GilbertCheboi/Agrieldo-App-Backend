@@ -186,6 +186,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 
+# Allow credentials (if using tokens/cookies)
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -294,38 +295,7 @@ MEDIA_URL = '/media/'
 
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,  # Keep Django's default logging (e.g., HTTP requests)
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',  # Use curly braces for string formatting
-        },
-    },
-    'handlers': {
-                'console': {
-            'class': 'logging.StreamHandler',  # Send logs to the console
-            'formatter': 'verbose',  # Use the readable format
-            'level': 'INFO',  # Show INFO and above (WARNING, ERROR)
-        },
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',  # Capture all logs at INFO level or higher
-    },
-    'loggers': {
-        'django': {  # Keep Django’s logs (e.g., HTTP requests)
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,  # Don’t send to root logger
-        },
-        'animals': {  # Specifically for your 'animals' app
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-    },
-}
 
+
+# settings.py
 

@@ -2,7 +2,7 @@
 from rest_framework import serializers
 from .models import (
     Animal, AnimalImage, HealthRecord, ProductionData, ReproductiveHistory,
-    FeedManagement, FinancialDetails, LactationStatus, LifetimeStats
+    FeedManagement, FinancialDetails, LactationPeriod, LifetimeStats
 )
 from farms.models import Farm
 
@@ -31,7 +31,23 @@ class HealthRecordSerializer(serializers.ModelSerializer):
 class ProductionDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductionData
-        fields = ['animal', 'id', 'date', 'session', 'milk_yield', 'feed_consumption', 'scc', 'fat_percentage', 'protein_percentage']
+        fields = ['animal', 'id', 'date', 'session', 'milk_yield', 'milk_price_per_liter', 'feed_consumption', 'scc', 'fat_percentage', 'protein_percentage']
+        read_only_fields = ['id']  # ID is auto-generated, should not be writable
+
+    def validate(self, data):
+        # Optional: Add custom validation if needed
+        return data
+
+
+class DailyProductionSummarySerializer(serializers.Serializer):
+    date = serializers.DateField()
+    total_milk_yield = serializers.FloatField()
+    avg_price_per_liter = serializers.DecimalField(max_digits=6, decimal_places=2)
+    total_feed_consumption = serializers.FloatField()
+    avg_scc = serializers.FloatField()
+    avg_fat_percentage = serializers.FloatField()
+    avg_protein_percentage = serializers.FloatField()
+
 
 class ReproductiveHistorySerializer(serializers.ModelSerializer):
     expected_calving_date = serializers.DateField(read_only=True)
@@ -59,16 +75,17 @@ class FinancialDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = FinancialDetails
         fields = ['total_feed_cost', 'total_vet_cost', 'total_breeding_cost', 'total_revenue_from_milk', 'total_cost']
-class LactationStatusSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = LactationStatus
-        fields = ['lactation_number', 'days_in_milk', 'is_milking', 'last_calving_date', 'expected_calving_date']
 
+class LactationPeriodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LactationPeriod
+        fields = ['id', 'lactation_number', 'days_in_milk', 'is_milking', 'last_calving_date', 'expected_calving_date', 'end_date']
 
 class LifetimeStatsSerializer(serializers.ModelSerializer):
     class Meta:
         model = LifetimeStats
         fields = ['total_milk', 'avg_yield', 'calves']
+
 
 class AnimalSerializer(serializers.ModelSerializer):
     # Allow images to be writable
@@ -79,21 +96,20 @@ class AnimalSerializer(serializers.ModelSerializer):
     reproductive_history = ReproductiveHistorySerializer(many=True, read_only=True)
     feed_management = FeedManagementSerializer(many=True, read_only=True)
     financial_details = FinancialDetailsSerializer(read_only=True)
-    lactation_status = LactationStatusSerializer(read_only=True)
+    lactation_periods = LactationPeriodSerializer(many=True, read_only=True)
     lifetime_stats = LifetimeStatsSerializer(read_only=True)
     # farm = FarmSerializer(read_only=True)
     farm = serializers.PrimaryKeyRelatedField(queryset=Farm.objects.all())
     category = serializers.SerializerMethodField()
     is_pregnant = serializers.SerializerMethodField()
     latest_milk_yield = serializers.SerializerMethodField()
-
     class Meta:
         model = Animal
         fields = [
             'tag','id', 'name', 'breed', 'dob', 'gender', 'farm', 'owner',
              'images', 'health_records', 'production_data',
             'reproductive_history', 'feed_management', 'financial_details',
-            'lactation_status', 'lifetime_stats', 'category', 'is_pregnant',
+            'lactation_periods', 'lifetime_stats', 'category', 'is_pregnant',
             'latest_milk_yield'
         ]
 

@@ -1,17 +1,23 @@
+# serializers.py
 from rest_framework import serializers
-from .models import Feed, FeedTransaction
+from .models import Feed
 
 class FeedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feed
-        fields = ['id', 'owner',  'name', 'quantity_kg', 'image']
+        fields = ['id', 'name', 'quantity_kg', 'price_per_kg', 'created_at', 'owner']
+        read_only_fields = ['owner', 'created_at']
 
+    def validate_name(self, value):
+        if not value:
+            raise serializers.ValidationError("Feed name is required.")
+        if self.instance is None:  # Only check uniqueness for new feeds
+            owner = self.context['request'].user
+            if Feed.objects.filter(name=value, owner=owner).exists():
+                raise serializers.ValidationError("A feed with this name already exists for your account.")
+        return value
 
-class FeedTransactionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FeedTransaction
-        fields = '__all__'
-class DailyConsumptionSerializer(serializers.Serializer):
-    date = serializers.DateField()
-    total_consumed = serializers.FloatField()
-    breakdown = serializers.ListField(child=serializers.DictField())
+    def validate_quantity_kg(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Quantity must be greater than 0.")
+        return value

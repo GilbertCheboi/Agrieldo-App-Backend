@@ -5,11 +5,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
-
-from django.db.models import Sum
-from .models import Animal, HealthRecord, ProductionData, ReproductiveHistory, FeedManagement, FinancialDetails
+from django.shortcuts import get_object_or_404
+from django.db.models import Sum, F, Avg,  ExpressionWrapper, DecimalField, FloatField
+from rest_framework.response import Response
+from .models import Animal, HealthRecord, ProductionData, ReproductiveHistory, FeedManagement, FinancialDetails, LactationPeriod
 from accounts.models import User
-from .serializers import AnimalSerializer, HealthRecordSerializer, ProductionDataSerializer, ReproductiveHistorySerializer, FeedManagementSerializer, FinancialDetailsSerializer
+from .serializers import AnimalSerializer, HealthRecordSerializer, ProductionDataSerializer, ReproductiveHistorySerializer, FeedManagementSerializer, FinancialDetailsSerializer, LactationPeriodSerializer, DailyProductionSummarySerializer
+
 from datetime import timedelta
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
@@ -189,7 +191,7 @@ class AnimalListView(generics.ListAPIView):
 
         return Animal.objects.filter(farm__id__in=accessible_farm_ids).prefetch_related(
             'images', 'health_records', 'production_data', 'reproductive_history',
-            'feed_management', 'financial_details', 'lactation_status', 'lifetime_stats', 'farm'
+            'feed_management', 'financial_details', 'lactation_periods', 'lifetime_stats', 'farm'
         )
 
 class AnimalDetailView(generics.RetrieveAPIView):
@@ -206,17 +208,92 @@ class AnimalDetailView(generics.RetrieveAPIView):
 
         return Animal.objects.filter(farm__id__in=accessible_farm_ids).prefetch_related(
             'images', 'health_records', 'production_data', 'reproductive_history',
-            'feed_management', 'financial_details', 'lactation_status', 'lifetime_stats', 'farm'
+            'feed_management', 'financial_details', 'lactation_periods', 'lifetime_stats', 'farm'
         )
+
+class MilkProductionCreateView(generics.ListCreateAPIView):
+    queryset = ProductionData.objects.all()
+    serializer_class = ProductionDataSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+
+class LactatingAnimalsListView(generics.ListAPIView):
+    serializer_class = AnimalSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        # Get farms linked to the user
+        owned_farms = Farm.objects.filter(owner=user)
+        staff_farms = Farm.objects.filter(farm_staff__user=user)
+        vet_farms = Farm.objects.filter(vet_staff__user=user)
+
+        # Combine all accessible farm IDs
+        accessible_farm_ids = owned_farms.union(staff_farms, vet_farms).values_list('id', flat=True)
+
+        # Return lactating animals from accessible farms
+        return Animal.objects.filter(
+            farm__id__in=accessible_farm_ids,
+            lactation_periods__is_milking=True
+        ).distinct().prefetch_related(
+            'images', 'health_records', 'production_data', 'reproductive_history',
+            'feed_management', 'financial_details', 'lactation_periods', 'lifetime_stats', 'farm'
+        )
+
+
+
+class DailyMilkProductionSummaryView(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure only authenticated users can access
+
+    def get(self, request):
+        # Filter production data by user
+        summary = (
+            ProductionData.objects.filter(animal__farm__owner=request.user)  # <-- Filter by authenticated user
+            .values('date')
+            .annotate(
+                total_milk_yield=Sum('milk_yield'),
+                total_revenue=Sum(ExpressionWrapper(F('milk_yield') * F('milk_price_per_liter'), output_field=DecimalField())),
+                avg_price_per_liter=ExpressionWrapper(
+                    Sum(ExpressionWrapper(F('milk_yield') * F('milk_price_per_liter'), output_field=DecimalField())) /
+                    Sum(F('milk_yield')),
+                    output_field=DecimalField()
+                ),
+                total_feed_consumption=Sum('feed_consumption'),
+                avg_scc=Avg('scc'),
+                avg_fat_percentage=Avg('fat_percentage'),
+                avg_protein_percentage=Avg('protein_percentage'),
+            )
+        )
+
+        serializer = DailyProductionSummarySerializer(summary, many=True)
+        return Response(serializer.data)
+
+
 
 
 class ProductionDataListCreateView(generics.ListCreateAPIView):
     queryset = ProductionData.objects.all()
     serializer_class = ProductionDataSerializer
-    permission_classes = [RoleBasedPermission]  # Farmer, Staff can add
+    permission_classes = [RoleBasedPermission]
 
-    def perform_create(self, serializer):
-        serializer.save()
+    def create(self, request, *args, **kwargs):
+        logger.info(f"Received request data: {request.data}")
+        if isinstance(request.data, list):
+            logger.info("Processing as list")
+            serializer = self.get_serializer(data=request.data, many=True)
+        else:
+            logger.info("Processing as single object")
+            serializer = self.get_serializer(data=request.data)
+
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
 class HealthRecordListCreateView(generics.ListCreateAPIView):
     queryset = HealthRecord.objects.all()
     serializer_class = HealthRecordSerializer
@@ -296,3 +373,18 @@ class FinancialDetailsListCreateView(generics.ListCreateAPIView):
         except Animal.DoesNotExist:
             logger.error(f"Animal with ID {animal_id} not found")
             raise serializers.ValidationError({"animal": "Animal does not exist."})
+
+
+
+class LactationPeriodListCreateView(generics.ListCreateAPIView):
+    serializer_class = LactationPeriodSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        animal_id = self.kwargs.get('animal_id')
+        return LactationPeriod.objects.filter(animal__id=animal_id, animal__owner=self.request.user)
+
+    def perform_create(self, serializer):
+        animal_id = self.kwargs.get('animal_id')
+        animal = get_object_or_404(Animal, id=animal_id, owner=self.request.user)
+        serializer.save(animal=animal)
