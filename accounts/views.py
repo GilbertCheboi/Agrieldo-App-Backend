@@ -204,3 +204,9 @@ class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]  # Require authentication
+
+class UserDetailView(generics.RetrieveAPIView):
+    """API endpoint to retrieve a single user by ID."""
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]

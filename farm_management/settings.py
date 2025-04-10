@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'farms',
     'machinery',
     'contracts',
+    'subscriptions',
     
     'finances',
     'feed',
@@ -179,6 +180,7 @@ CORS_ALLOWED_ORIGINS = [
 
 
     "http://localhost:3000",     # React Native development server
+    "http://localhost:3002", 
 
 
 ]
