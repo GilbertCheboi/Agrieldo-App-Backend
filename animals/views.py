@@ -10,14 +10,15 @@ from django.db.models import Sum, F, Avg,  ExpressionWrapper, DecimalField, Floa
 from rest_framework.response import Response
 from .models import Animal, HealthRecord, ProductionData, ReproductiveHistory, FeedManagement, FinancialDetails, LactationPeriod
 from accounts.models import User
-from .serializers import AnimalSerializer, HealthRecordSerializer, ProductionDataSerializer, ReproductiveHistorySerializer, FeedManagementSerializer, FinancialDetailsSerializer, LactationPeriodSerializer, DailyProductionSummarySerializer
-
-from datetime import timedelta
+from .serializers import AnimalSerializer, HealthRecordSerializer, ProductionDataSerializer, ReproductiveHistorySerializer, FeedManagementSerializer, FinancialDetailsSerializer, LactationPeriodSerializer, DailyProductionSummarySerializer, DailyFinancialSerializer, DailyFeedVsMilkRevenueSerializer
+from datetime import timedelta, datetime
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 from .models import ( AnimalImage)
 import logging
+from django.db.models.functions import TruncDate
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -388,3 +389,169 @@ class LactationPeriodListCreateView(generics.ListCreateAPIView):
         animal_id = self.kwargs.get('animal_id')
         animal = get_object_or_404(Animal, id=animal_id, owner=self.request.user)
         serializer.save(animal=animal)
+
+
+
+
+
+class FinancialDataView(APIView):
+    def get(self, request):
+        # Define date range (e.g., last 30 days)
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=30)
+
+        # Aggregate revenue from ProductionData
+        revenue_data = (ProductionData.objects
+                       .filter(date__range=[start_date, end_date])
+                       .annotate(day=TruncDate('date'))
+                       .values('day')
+                       .annotate(total_revenue=Sum(F('milk_yield') * F('milk_price_per_liter')))
+                       .order_by('day'))
+
+        # Aggregate costs from FeedManagement
+        feed_costs = (FeedManagement.objects
+                     .filter(date__range=[start_date, end_date])
+                     .annotate(day=TruncDate('date'))
+                     .values('day')
+                     .annotate(total_cost=Sum('total_cost'))
+                     .order_by('day'))
+
+        # Aggregate costs from ReproductiveHistory (only AI/Natural Breeding events)
+        repro_costs = (ReproductiveHistory.objects
+                      .filter(date__range=[start_date, end_date], event__in=['AI', 'Natural Breeding'])
+                      .annotate(day=TruncDate('date'))
+                      .values('day')
+                      .annotate(total_cost=Sum('cost'))
+                      .order_by('day'))
+
+        # Aggregate costs from HealthRecord
+        health_costs = (HealthRecord.objects
+                       .filter(date__range=[start_date, end_date])
+                       .annotate(day=TruncDate('date'))
+                       .values('day')
+                       .annotate(total_cost=Sum('cost'))
+                       .order_by('day'))
+
+        # Combine all data into a single daily breakdown
+        daily_totals = defaultdict(lambda: {'total_cost': Decimal('0.00'), 'total_revenue': Decimal('0.00')})
+
+        # Add revenue
+        for entry in revenue_data:
+            day = entry['day']
+            daily_totals[day]['total_revenue'] += Decimal(str(entry['total_revenue'] or 0))
+
+        # Add feed costs
+        for entry in feed_costs:
+            day = entry['day']
+            daily_totals[day]['total_cost'] += Decimal(str(entry['total_cost'] or 0))
+
+        # Add reproduction costs
+        for entry in repro_costs:
+            day = entry['day']
+            daily_totals[day]['total_cost'] += Decimal(str(entry['total_cost'] or 0))
+
+        # Add health costs
+        for entry in health_costs:
+            day = entry['day']
+            daily_totals[day]['total_cost'] += Decimal(str(entry['total_cost'] or 0))
+
+        # Format data for serialization
+        formatted_data = [
+            {'date': day, 'total_cost': totals['total_cost'], 'total_revenue': totals['total_revenue']}
+            for day, totals in sorted(daily_totals.items())
+        ]
+
+        # Serialize and return
+        serializer = DailyFinancialSerializer(formatted_data, many=True)
+        return Response(serializer.data)
+
+
+
+
+
+class DailyFeedVsMilkRevenueView(APIView):
+    def get(self, request, farm_id):
+        logger.info(f"Request for farm_id: {farm_id}, params: {request.query_params}")
+        try:
+            # Get end_date, defaulting to today, and ensure it's a date object
+            end_date_param = request.query_params.get('end_date')
+            if end_date_param:
+                end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
+            else:
+                end_date = datetime.today().date()
+
+            # Get start_date, defaulting to 30 days before end_date
+            start_date_param = request.query_params.get('start_date')
+            if start_date_param:
+                start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
+            else:
+                start_date = end_date - timedelta(days=30)
+
+            logger.info(f"Parsed start_date: {start_date}, end_date: {end_date}")
+
+            # Get animals for the farm
+            logger.info(f"Fetching animals for farm_id: {farm_id}")
+            animals = Animal.objects.filter(farm_id=farm_id).values_list('id', flat=True)
+            if not animals.exists():
+                logger.warning(f"No animals found for farm_id: {farm_id}")
+                return Response({"detail": "No animals found for this farm."}, status=status.HTTP_404_NOT_FOUND)
+            logger.info(f"Found {len(animals)} animals")
+
+            # Aggregate feed costs by date
+            logger.info("Aggregating feed data")
+            feed_data = (
+                FeedManagement.objects
+                .filter(animal__in=animals, date__range=[start_date, end_date])
+                .values('date')
+                .annotate(total_feed_cost=Sum('total_cost'))
+                .order_by('date')
+            )
+            logger.info(f"Feed data: {list(feed_data)}")
+
+            # Aggregate milk revenue by date
+            logger.info("Aggregating milk data")
+            milk_data = (
+                ProductionData.objects
+                .filter(animal__in=animals, date__range=[start_date, end_date])
+                .values('date')
+                .annotate(
+                    total_milk_yield=Sum('milk_yield'),
+                    avg_price=Avg('milk_price_per_liter')
+                )
+                .annotate(
+                    total_revenue=ExpressionWrapper(
+                        Sum('milk_yield') * Avg('milk_price_per_liter'),
+                        output_field=DecimalField(max_digits=12, decimal_places=2)
+                    )
+                )
+                .order_by('date')
+            )
+            logger.info(f"Milk data: {list(milk_data)}")
+
+            # Combine data into a single response
+            result = {}
+            current_date = start_date
+            while current_date <= end_date:
+                date_str = current_date.strftime('%Y-%m-%d')
+                result[date_str] = {'date': date_str, 'feed_cost': 0.0, 'milk_revenue': 0.0}
+                current_date += timedelta(days=1)
+
+            for entry in feed_data:
+                date_str = entry['date'].strftime('%Y-%m-%d')
+                result[date_str]['feed_cost'] = float(entry['total_feed_cost'])
+
+            for entry in milk_data:
+                date_str = entry['date'].strftime('%Y-%m-%d')
+                result[date_str]['milk_revenue'] = float(entry['total_revenue'])
+
+            response_data = list(result.values())
+            serializer = DailyFeedVsMilkRevenueSerializer(response_data, many=True)
+            logger.info("Data serialized successfully")
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except ValueError as ve:
+            logger.error(f"ValueError: {str(ve)}")
+            return Response({'error': f"Invalid date format: {str(ve)}"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Unexpected error: {str(e)}", exc_info=True)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

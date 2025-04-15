@@ -13,7 +13,9 @@ from .views import (
     LactationPeriodListCreateView,  # Added
     MilkProductionCreateView,
     LactatingAnimalsListView,
-    DailyMilkProductionSummaryView
+    DailyMilkProductionSummaryView,
+    FinancialDataView,
+    DailyFeedVsMilkRevenueView
 )
 
 urlpatterns = [
@@ -33,5 +35,6 @@ urlpatterns = [
     path('production/milk/', ProductionDataListCreateView.as_view(), name='milk-production'),
     path('production/milk/lactating-animals/', LactatingAnimalsListView.as_view(), name='lactating-animals'),
     path('production/daily-summary/', DailyMilkProductionSummaryView.as_view(), name='daily-production-summary'),
-
+    path('api/financial-data/', FinancialDataView.as_view(), name='financial_data'),
+    path('farms/<int:farm_id>/daily-feed-vs-milk/', DailyFeedVsMilkRevenueView.as_view(), name='daily_feed_vs_milk'),
 ]

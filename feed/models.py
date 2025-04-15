@@ -42,3 +42,36 @@ class Feed(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.quantity_kg} kg"
+
+
+
+class FeedingPlan(models.Model):
+    name = models.CharField(max_length=100, null=True, blank=True, help_text="Name of the feeding plan (e.g., 'Lactating Cow Plan')")
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='feeding_plans',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('owner', 'name')  # One plan name per user
+
+    def __str__(self):
+        return self.name
+
+class FeedingPlanItem(models.Model):
+    plan = models.ForeignKey(FeedingPlan, on_delete=models.CASCADE, related_name='items')
+    feed = models.ForeignKey('Feed', on_delete=models.CASCADE)
+    quantity_per_animal = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Quantity of this feed (in kg) per animal."
+    )
+
+    class Meta:
+        unique_together = ('plan', 'feed')  # One feed type per plan
+
+    def __str__(self):
+        return f"{self.feed.name}: {self.quantity_per_animal} kg"

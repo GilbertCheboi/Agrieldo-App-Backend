@@ -193,17 +193,16 @@ class FeedManagement(models.Model):
     date = models.DateField()
     type = models.CharField(max_length=50)
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
-    cost_per_unit = models.FloatField(default=0.0, help_text="Cost per kg of feed")  # New field
-    total_cost = models.FloatField(default=0.0, help_text="Total cost for this feed entry (quantity * cost_per_unit)")  # New field
+    cost_per_unit = models.FloatField(default=0.0, help_text="Cost per kg of feed")
+    total_cost = models.FloatField(default=0.0, help_text="Total cost for this feed entry (quantity * cost_per_unit)")
 
     def save(self, *args, **kwargs):
-        # Automatically calculate total_cost before saving
-        self.total_cost = self.quantity * self.cost_per_unit
+        # Convert quantity to float for multiplication with cost_per_unit
+        self.total_cost = float(self.quantity) * self.cost_per_unit
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.date} - {self.type}"
-
 
 class FinancialDetails(models.Model):
     animal = models.OneToOneField('Animal', on_delete=models.CASCADE, related_name="financial_details")

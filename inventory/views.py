@@ -64,6 +64,7 @@ class OutletListCreateView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class InventoryListCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -116,19 +117,22 @@ class InventoryListCreateView(APIView):
                     ).first()
 
                     if not store_inventory or store_inventory.quantity < quantity:
-                        return Response({"detail": "Insufficient stock in store for the selected date."}, status=400)
+                        return Response(
+                            {"detail": "Insufficient stock in store for the selected date."},
+                            status=400
+                        )
 
                     # Deduct from store
                     store_inventory.quantity -= quantity
                     store_inventory.save()
 
-                    # Add to outlet inventory for the same date
+                    # Add to outlet inventory (respecting unique constraint)
                     outlet_inventory, created = Inventory.objects.get_or_create(
                         produce_id=produce_id,
                         store_id=store_id,
                         outlet_id=outlet_id,
                         user=request.user,
-                        created_at__date=created_at_date
+                        defaults={'quantity': 0, 'created_at': created_at}  # Initial values if created
                     )
 
                     outlet_inventory.quantity += quantity
@@ -167,6 +171,8 @@ class InventoryListCreateView(APIView):
 
         except Exception as e:
             return Response({"detail": str(e)}, status=500)
+
+
 class TransactionListCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 

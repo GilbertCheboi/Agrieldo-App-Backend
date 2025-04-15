@@ -174,7 +174,8 @@ CORS_ALLOWED_ORIGINS = [
     "https://agrieldo.com",
     "https://api.agrieldo.com",  # ✅ Must be here, since it's where frontend is talking to the backend
     "https://www.agrieldo.com",
-
+    "http://crm.agrieldo.com",
+    "http://agrieldo.com",
     "http://192.168.100.4:3001",  # Local Django development server
 
 

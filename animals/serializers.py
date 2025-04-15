@@ -120,3 +120,20 @@ class AnimalSerializer(serializers.ModelSerializer):
         latest_production = obj.production_data.order_by('-date').first()
         return latest_production.milk_yield if latest_production else 0.0
 
+
+
+
+class DailyFinancialSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    total_cost = serializers.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    total_revenue = serializers.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+
+
+
+class DailyFeedVsMilkRevenueSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    feed_cost = serializers.FloatField()
+    milk_revenue = serializers.FloatField()
+
+    class Meta:
+        fields = ['date', 'feed_cost', 'milk_revenue']
