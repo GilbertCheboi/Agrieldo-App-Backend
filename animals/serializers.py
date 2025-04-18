@@ -14,7 +14,7 @@ class FarmSerializer(serializers.ModelSerializer):
 class AnimalImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = AnimalImage
-        fields = ['image', 'caption']
+        fields = ['image']
 
 
 class HealthRecordSerializer(serializers.ModelSerializer):
@@ -88,7 +88,9 @@ class LifetimeStatsSerializer(serializers.ModelSerializer):
 
 
 class AnimalSerializer(serializers.ModelSerializer):
-    images = AnimalImageSerializer(many=True, read_only=True)
+    # Allow images to be writable
+    images = AnimalImageSerializer(many=True, required=False)
+
     health_records = HealthRecordSerializer(many=True, read_only=True)
     production_data = ProductionDataSerializer(many=True, read_only=True)
     reproductive_history = ReproductiveHistorySerializer(many=True, read_only=True)
@@ -96,14 +98,15 @@ class AnimalSerializer(serializers.ModelSerializer):
     financial_details = FinancialDetailsSerializer(read_only=True)
     lactation_periods = LactationPeriodSerializer(many=True, read_only=True)
     lifetime_stats = LifetimeStatsSerializer(read_only=True)
-    farm = FarmSerializer(read_only=True)
+    # farm = FarmSerializer(read_only=True)
+    farm = serializers.PrimaryKeyRelatedField(queryset=Farm.objects.all())
     category = serializers.SerializerMethodField()
     is_pregnant = serializers.SerializerMethodField()
     latest_milk_yield = serializers.SerializerMethodField()
     class Meta:
         model = Animal
         fields = [
-            'tag','id', 'name', 'breed', 'dob', 'gender', 'farm', 'owner', 'assigned_worker',
+            'tag','id', 'name', 'breed', 'dob', 'gender', 'farm', 'owner',
              'images', 'health_records', 'production_data',
             'reproductive_history', 'feed_management', 'financial_details',
             'lactation_periods', 'lifetime_stats', 'category', 'is_pregnant',
@@ -122,7 +125,6 @@ class AnimalSerializer(serializers.ModelSerializer):
 
 
 
-
 class DailyFinancialSerializer(serializers.Serializer):
     date = serializers.DateField()
     total_cost = serializers.DecimalField(max_digits=12, decimal_places=2, default=0.00)
@@ -137,3 +139,14 @@ class DailyFeedVsMilkRevenueSerializer(serializers.Serializer):
 
     class Meta:
         fields = ['date', 'feed_cost', 'milk_revenue']
+
+    def create(self, validated_data):
+            # Remove images data from the validated_data
+            images_data = validated_data.pop('images', [])
+            # Create the animal instance first
+            animal = Animal.objects.create(**validated_data)
+            # Now create the related AnimalImage instances if any image data is provided.
+            for image_data in images_data:
+                AnimalImage.objects.create(animal=animal, **image_data)
+            return animal
+

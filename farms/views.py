@@ -176,3 +176,17 @@ def get_farms(request):
     farms = Farm.objects.filter(owner=request.user)  # Assuming `owner` is the farm owner field
     serializer = FarmSerializer(farms, many=True)
     return Response(serializer.data)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_farm_by_id(request, pk):
+    """
+    Return the farm with the given id that is owned by the authenticated user.
+    """
+    try:
+        farm = Farm.objects.get(pk=pk, owner=request.user)
+    except Farm.DoesNotExist:
+        return Response({"error": "Farm not found or unauthorized."}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = FarmSerializer(farm)
+    return Response(serializer.data)

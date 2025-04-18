@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import FarmViewSet, FarmStaffListView, AddFarmStaffView, RemoveFarmStaffView, get_farms, FarmVetListView, AddFarmVetView, RemoveFarmVetView
+from .views import FarmViewSet, FarmStaffListView, AddFarmStaffView, RemoveFarmStaffView, get_farms, get_farm_by_id, FarmVetListView, AddFarmVetView, RemoveFarmVetView
 
 
 router = DefaultRouter()
@@ -15,6 +15,7 @@ urlpatterns = [
     path("<int:farm_id>/add-vet/", AddFarmVetView.as_view(), name="add-farm-vet"),
     path("<int:farm_id>/remove-vet/<int:user_id>/", RemoveFarmVetView.as_view(), name="remove-farm-vet"),
     path("get_farms/", get_farms, name="get_farms"),  # List farms owned or managed by the user
+    path("get_farms/<int:pk>/", get_farm_by_id, name="farm-detail"),  # List farms owned or managed by the user
 
 
 
