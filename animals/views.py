@@ -65,16 +65,21 @@ class RoleBasedPermission(permissions.BasePermission):
         view_name = view.__class__.__name__  # Use class name instead of basename
 
         # Production Data (POST = add)
-        if view_name == 'ProductionDataListCreateView' and request.method == 'POST':
-            return role in [User.FARMER, User.STAFF]  # Farmer (1), Staff (3)
+        if view_name in ['ProductionDataListCreateView', 'ProductionDataRetrieveUpdateView'] and request.method in ['POST', 'PUT']:
+            return role in [User.FARMER, User.STAFF] # Farmer (1), Staff (3)
 
         # Health Records (POST/PUT = add/edit)
         if view_name == 'HealthRecordListCreateView' and request.method in ['POST', 'PUT']:
             return role in [User.FARMER, User.VET]  # Farmer (1), Vet (2)
 
+        # # Reproductive History (POST/PUT = add/edit)
+        # if view_name == 'ReproductiveHistoryListCreateView' and request.method in ['POST', 'PUT']:
+        #     return role in [User.FARMER, User.VET]  # Farmer (1), Vet (2)
+
         # Reproductive History (POST/PUT = add/edit)
-        if view_name == 'ReproductiveHistoryListCreateView' and request.method in ['POST', 'PUT']:
-            return role in [User.FARMER, User.VET]  # Farmer (1), Vet (2)
+        if view_name in ['ReproductiveHistoryListCreateView', 'ReproductiveHistoryRetrieveUpdateView'] \
+        and request.method in ['POST', 'PUT']:
+            return role in [User.FARMER, User.VET]
 
         # Allow GET for all authenticated users
         return request.method in permissions.SAFE_METHODS
@@ -295,6 +300,16 @@ class ProductionDataListCreateView(generics.ListCreateAPIView):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
+class ProductionDataRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+    queryset = ProductionData.objects.all()
+    serializer_class = ProductionDataSerializer
+    permission_classes = [RoleBasedPermission]
+    lookup_field = 'id'
+
+    def update(self, request, *args, **kwargs):
+        logger.info(f"Updating production data with ID {kwargs.get('id')}")
+        return super().update(request, *args, **kwargs)
+
 class HealthRecordListCreateView(generics.ListCreateAPIView):
     queryset = HealthRecord.objects.all()
     serializer_class = HealthRecordSerializer
@@ -332,6 +347,28 @@ class ReproductiveHistoryListCreateView(generics.ListCreateAPIView):
         except Animal.DoesNotExist:
             logger.error(f"Animal with ID {animal_id} not found")
             raise serializers.ValidationError({"animal": "Animal does not exist."})
+
+class ReproductiveHistoryRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+    queryset = ReproductiveHistory.objects.all()
+    serializer_class = ReproductiveHistorySerializer
+    permission_classes = [RoleBasedPermission]
+    lookup_field = 'id'  # Ensure this matches your URL pattern
+
+    def get_queryset(self):
+        """
+        Optionally filter based on user roles.
+        """
+        user = self.request.user
+        if hasattr(user, 'user_type'):
+            if user.user_type == 3:  # Staff
+                return ReproductiveHistory.objects.filter(animal__farm__staff=user)
+            return ReproductiveHistory.objects.all()
+        return ReproductiveHistory.objects.none()
+
+    def perform_update(self, serializer):
+        logger.info(f"Updating ReproductiveHistory ID {self.kwargs.get('id')}")
+        return serializer.save()
+
 
 class FeedManagementListCreateView(generics.ListCreateAPIView):
     queryset = FeedManagement.objects.all()
@@ -390,6 +427,7 @@ class LactationPeriodListCreateView(generics.ListCreateAPIView):
         animal = get_object_or_404(Animal, id=animal_id, owner=self.request.user)
         serializer.save(animal=animal)
 
+<<<<<<< HEAD
 
 
 
@@ -555,3 +593,69 @@ class DailyFeedVsMilkRevenueView(APIView):
         except Exception as e:
             logger.error(f"Unexpected error: {str(e)}", exc_info=True)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+=======
+class LactationPeriodRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = LactationPeriod.objects.all()
+    serializer_class = LactationPeriodSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return LactationPeriod.objects.filter(animal__owner=self.request.user)
+
+
+class DailyFeedVsMilkView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, farm_id):
+        user = request.user
+
+        # Check farm access
+        farm = get_object_or_404(
+            Farm.objects.filter(
+                Q(owner=user) |
+                Q(farm_staff__user=user) |
+                Q(vet_staff__user=user)
+            ),
+            id=farm_id
+        )
+
+        # Get animals in the farm
+        animals = Animal.objects.filter(farm=farm).values_list('id', flat=True)
+
+        # Get date range from query params or use last 7 days
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+
+        if not start_date:
+            start_date = timezone.now().date() - timedelta(days=6)
+        else:
+            start_date = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
+
+        if not end_date:
+            end_date = timezone.now().date()
+        else:
+            end_date = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
+
+        # Get daily milk and feed data
+        daily_data = (
+            ProductionData.objects
+            .filter(animal_id__in=animals, date__range=[start_date, end_date])
+            .values('date')
+            .annotate(
+                total_milk_yield=Sum('milk_yield'),
+                total_feed_consumption=Sum('feed_consumption')
+            )
+            .order_by('date')
+        )
+
+        response_data = [
+            {
+                'date': entry['date'].strftime('%b %d'),
+                'milk_yield': float(entry['total_milk_yield'] or 0),
+                'feed_consumption': float(entry['total_feed_consumption'] or 0),
+            }
+            for entry in daily_data
+        ]
+
+        return Response(response_data, status=status.HTTP_200_OK)
+>>>>>>> f2f527d5d3415f566814c37d2a0a96da1d26110b

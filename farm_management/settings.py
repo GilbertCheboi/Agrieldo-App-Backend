@@ -167,7 +167,7 @@ DATABASES = {
 AUTH_USER_MODEL = 'accounts.User'
 
 CORS_ALLOWED_ORIGINS = [
-
+    '*',
     "http://localhost:19000",     # React Native development server
     "http://192.168.100.4:8000",  # Local Django development server
     "http://localhost:3001",     # React Native development server
@@ -178,7 +178,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://crm.agrieldo.com",
     "http://agrieldo.com",
     "http://192.168.100.4:3001",  # Local Django development server
-
+    "http://192.168.100.4:8000",  # Local Django development server due to changes
 
     "http://localhost:3000",     # React Native development server
     "http://localhost:3002", 

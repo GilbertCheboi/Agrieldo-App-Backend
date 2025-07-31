@@ -3,7 +3,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
-from profiles.models import Farmer, Vet, Staff  # Import the profile models
+from profiles.models import Farmer, Vet, Staff, MechanizationAgent  
+from machinery.models import MachineryVendorApplication
 from .serializers import UserRegistrationSerializer, UserSerializer
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -34,6 +35,7 @@ class UserRegistrationView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         # Extract user registration data
         user_type = request.data.get('user_type')  # Expect 1 for Farmer, 2 for Vet
+        phone_number = request.data.get('phone_number', '')  # ✅ Define it here
 
         # Check required fields
         if not user_type:
@@ -59,6 +61,12 @@ class UserRegistrationView(generics.CreateAPIView):
                 phone_number=request.data.get('phone_number', ''),
             )
             print("Vet profile created")  # Debugging line
+        
+        elif user_type == "4":  # Mechanization Agent (Vendor)
+            MechanizationAgent.objects.create(
+                user=user,
+                phone_number=phone_number,
+            )
         else:
             return Response({"error": "Invalid user type."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -81,10 +89,13 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 user_type = 'vet'
             elif hasattr(user, 'staff_profile'):
                 user_type = 'staff'
+            elif hasattr(user, 'mechanization_agent_profile'):
+                user_type = 'mechanization_agent'
 
             else:
                 user_type = 'unknown'
             user_id = user.id  # Get user ID directly from the user instance
+            
 
         except User.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
