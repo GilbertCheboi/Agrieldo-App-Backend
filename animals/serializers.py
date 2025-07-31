@@ -88,6 +88,9 @@ class LifetimeStatsSerializer(serializers.ModelSerializer):
 
 
 class AnimalSerializer(serializers.ModelSerializer):
+     # Automatically assign the authenticated user as owner
+    owner = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
     # Allow images to be writable
     images = AnimalImageSerializer(many=True, required=False)
 

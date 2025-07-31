@@ -34,9 +34,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 return User.VET
             elif value_lower == 'staff':
                 return User.STAFF
-            elif value.isdigit() and int(value) in [User.FARMER, User.VET, User.STAFF]:
+            elif value_lower == 'mechanization agent':
+                return User.MECHANIZATION_AGENT
+            elif value.isdigit() and int(value) in [User.FARMER, User.VET, User.STAFF, User.MECHANIZATION_AGENT]:
                 return int(value)
-        elif isinstance(value, int) and value in [User.FARMER, User.VET, User.STAFF]:
+        elif isinstance(value, int) and value in [User.FARMER, User.VET, User.STAFF, User.MECHANIZATION_AGENT]:
             return value
         raise serializers.ValidationError("Invalid user type.")
 
@@ -69,6 +71,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             user_type=validated_data['user_type']
         )
         return user
+        
 class PasswordResetRequestSerializer(serializers.Serializer):
     email_or_phone = serializers.CharField()
 

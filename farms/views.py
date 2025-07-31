@@ -8,6 +8,9 @@ from .permissions import IsFarmerOrReadOnly
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from animals.models import Animal
+from animals.serializers import AnimalSerializer  # ✅ same here
+
 
 User = get_user_model()
 
@@ -18,11 +21,29 @@ class FarmViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+
+        if user.is_superuser:
+            return Farm.objects.all()
+
         if user.user_type == 1:  # FARMER
             return Farm.objects.filter(owner=user)
-        elif user.user_type == 3:  # STAFF
+
+        if user.user_type == 3:  # STAFF
             return Farm.objects.filter(staff=user)
-        return Farm.objects.all()
+
+        return Farm.objects.none()
+
+    def get_object(self):
+        obj = super().get_object()
+        user = self.request.user
+
+        if user.is_superuser:
+            return obj
+
+        if obj.owner == user or user in obj.staff.all():
+            return obj
+
+        raise PermissionDenied("You do not have permission to access this farm.")
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -190,3 +211,28 @@ def get_farm_by_id(request, pk):
 
     serializer = FarmSerializer(farm)
     return Response(serializer.data)
+
+class FarmAnimalsView(APIView):
+    """
+    Return all animals for a specific farm if the user has access.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, farm_id):
+        farm = get_object_or_404(Farm, id=farm_id)
+
+        # Ensure the user has access to the farm
+        is_owner = farm.owner == request.user
+        is_staff = FarmStaff.objects.filter(farm=farm, user=request.user).exists()
+        is_vet = FarmVet.objects.filter(farm=farm, user=request.user).exists()
+
+        if not (is_owner or is_staff or is_vet):
+            return Response({"error": "You are not authorized to view animals on this farm."},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        animals = Animal.objects.filter(farm=farm).prefetch_related(
+            'images', 'health_records', 'production_data', 'reproductive_history',
+            'feed_management', 'financial_details', 'lactation_periods', 'lifetime_stats'
+        )
+        serializer = AnimalSerializer(animals, many=True)
+        return Response(serializer.data)

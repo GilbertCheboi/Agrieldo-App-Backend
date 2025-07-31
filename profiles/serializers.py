@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Farmer, Vet, Lead, Staff
+from .models import Farmer, Vet, Lead, Staff, MechanizationAgent
 
 class FarmerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,4 +30,9 @@ class StaffSerializer(serializers.ModelSerializer):
 class LeadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lead
+        fields = '__all__'
+
+class MechanizationAgentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MechanizationAgent
         fields = '__all__'

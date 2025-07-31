@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils import timezone  # Import timezone
-from .models import Vet, Farmer, Lead, Staff
+from .models import Vet, Farmer, Lead, Staff, MechanizationAgent
 
 class VetAdmin(admin.ModelAdmin):
     list_display = ('user', 'phone_number', 'is_available', 'last_active')
@@ -48,3 +48,12 @@ class LeadAdmin(admin.ModelAdmin):
     )
 
 admin.site.register(Lead, LeadAdmin)
+
+# -----------------------------
+# Mechanization Agent Admin
+# -----------------------------
+class MechanizationAgentAdmin(admin.ModelAdmin):
+    list_display = ('user', 'phone_number')
+    search_fields = ('user__username', 'phone_number', 'location')
+
+admin.site.register(MechanizationAgent, MechanizationAgentAdmin)

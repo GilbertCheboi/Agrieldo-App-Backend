@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.db import models
 
+from machinery.models import MachineryVendorApplication 
+
 class Vet(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -83,3 +85,15 @@ class Lead(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name} - {self.status}"
 
+class MechanizationAgent(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='mechanization_agent_profile'
+    )
+    phone_number = models.CharField(max_length=15)
+    is_available = models.BooleanField(default=True)
+    last_active = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Mechanization Agent Profile for {self.user.username}"

@@ -1,6 +1,5 @@
 from rest_framework import serializers
-from .models import Machinery, MachineryUsageLog, MaintenanceLog, FuelLog, SparePart, Alert
-
+from .models import Machinery, MachineryUsageLog, MaintenanceLog, FuelLog, SparePart, Alert, MachineryVendorApplication, MachineryOrder
 
 class MachineryUsageLogSerializer(serializers.ModelSerializer):
     machinery_name = serializers.ReadOnlyField(source="machinery.name")  # To show machinery name in response
@@ -36,4 +35,47 @@ class AlertSerializer(serializers.ModelSerializer):
     class Meta:
         model = Alert
         fields = '__all__'
+
+
+
+class MachineryVendorApplicationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MachineryVendorApplication
+        # explicitly list fields (or add price_per_day if you’re using `__all__`)
+        fields = [
+            'id', 'user', 'name', 'phone_number',
+            'type_of_machine', 'model', 'price_per_day',
+            'latitude', 'longitude', 'submitted_at',
+            'approved', 'is_active',
+        ]
+        read_only_fields = ['id', 'user', 'submitted_at', 'approved', 'is_active']
+
+class MachineryOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MachineryOrder
+        # only the fields your frontend sends:
+        fields = [
+            'customer_name',
+            'customer_phone',
+            'land_size_acres',
+            'notes',
+            'start_date',
+            'end_date',
+        ]
+        read_only_fields = ['id']
+
+
+class MachineryOrderCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MachineryOrder
+        # only the fields your frontend sends:
+        fields = [
+            'customer_name',
+            'customer_phone',
+            'land_size_acres',
+            'notes',
+            'start_date',
+            'end_date',
+        ]
+
 

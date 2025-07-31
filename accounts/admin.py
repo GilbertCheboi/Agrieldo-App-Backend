@@ -6,7 +6,7 @@ User = get_user_model()
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     # Add 'phone_number', 'latitude', 'longitude' to the list display
-    list_display = ('username', 'email', 'phone_number', 'is_staff', 'is_active')  
+    list_display = ('username', 'email', 'phone_number', 'user_type', 'is_staff', 'is_active')  
     search_fields = ('username', 'email', 'phone_number')  # Allow searching by phone_number too
     list_filter = ('is_staff', 'is_active')  # Filter by active or staff status
 

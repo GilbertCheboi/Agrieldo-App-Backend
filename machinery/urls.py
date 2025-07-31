@@ -3,7 +3,7 @@ from .views import (
     MachineryViewSet,     MaintenanceLogListCreateView, MaintenanceLogDetailView,
     FuelLogListCreateView, FuelLogDetailView,
     SparePartListCreateView, SparePartDetailView,
-    AlertListCreateView, AlertDetailView,  MachineryUsageLogsView
+    AlertListCreateView, AlertDetailView,  MachineryUsageLogsView, MachineryVendorApplicationCreateView, ActiveApprovedVendorListView, nearby_machinery,update_my_location, MachineryOrderCreateView
 )
 
 urlpatterns = [
@@ -28,6 +28,11 @@ urlpatterns = [
 
     path("<int:machinery_id>/usage-logs/", MachineryUsageLogsView.as_view(), name="machinery-usage-logs"),
 
-
+    path('vendors/apply/', MachineryVendorApplicationCreateView.as_view(), name='vendor-apply'),
+    path('vendors/active/', ActiveApprovedVendorListView.as_view(), name='active-vendors'),
+    path('nearby/', nearby_machinery, name='nearby-machinery'),
+    path('vendors/update-location/', update_my_location, name='update-my-location'),
+    path('orders/', MachineryOrderCreateView.as_view(), name='machinery-order-create'),
+     
 ]
 

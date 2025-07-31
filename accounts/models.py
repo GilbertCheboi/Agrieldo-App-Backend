@@ -9,11 +9,13 @@ class User(AbstractUser):
     FARMER = 1
     VET = 2
     STAFF = 3
+    MECHANIZATION_AGENT = 4
 
     USER_TYPE_CHOICES = (
         (FARMER, 'Farmer'),
         (VET, 'Vet'),
         (STAFF, 'Staff'),
+        (MECHANIZATION_AGENT, 'Mechanization Agent')
     )
 
     user_type = models.PositiveSmallIntegerField(choices=USER_TYPE_CHOICES, default=FARMER)  # Default to Farmer
