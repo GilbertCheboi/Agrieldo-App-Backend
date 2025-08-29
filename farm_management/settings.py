@@ -186,6 +186,11 @@ CORS_ALLOWED_ORIGINS = [
 
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://api.agrieldo.com",
+    "https://www.agrieldo.com",
+]
+
 
 # Allow credentials (if using tokens/cookies)
 
