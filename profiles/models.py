@@ -3,6 +3,9 @@ from django.db import models
 
 from machinery.models import MachineryVendorApplication 
 
+from django.db import models
+from django.conf import settings
+
 class Vet(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -13,8 +16,18 @@ class Vet(models.Model):
     is_available = models.BooleanField(default=True)
     last_active = models.DateTimeField(null=True, blank=True)
 
+    # 🆕 Location fields
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+
     def __str__(self):
         return f"Vet Profile for {self.user.username}"
+
+    @property
+    def location(self):
+        if self.latitude is not None and self.longitude is not None:
+            return {"lat": self.latitude, "lng": self.longitude}
+        return None
 
 class Farmer(models.Model):
     user = models.OneToOneField(
@@ -97,3 +110,26 @@ class MechanizationAgent(models.Model):
 
     def __str__(self):
         return f"Mechanization Agent Profile for {self.user.username}"
+
+
+class VetRequest(models.Model):
+    farmer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="vet_requests"
+    )
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(
+        max_length=20,
+        choices=(
+            ("pending", "Pending"),
+            ("accepted", "Accepted"),
+            ("completed", "Completed"),
+        ),
+        default="pending"
+    )
+
+    def __str__(self):
+        return f"VetRequest by {self.farmer} at {self.created_at}"

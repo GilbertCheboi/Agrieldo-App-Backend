@@ -3,7 +3,7 @@ from django.utils import timezone  # Import timezone
 from .models import Vet, Farmer, Lead, Staff, MechanizationAgent
 
 class VetAdmin(admin.ModelAdmin):
-    list_display = ('user', 'phone_number', 'is_available', 'last_active')
+    list_display = ('user', 'phone_number', 'is_available', 'last_active', 'latitude', 'longitude')
     list_filter = ('is_available',)
     search_fields = ('user__username', 'phone_number')
     list_editable = ('is_available',)

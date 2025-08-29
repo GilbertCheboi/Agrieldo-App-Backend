@@ -427,7 +427,6 @@ class LactationPeriodListCreateView(generics.ListCreateAPIView):
         animal = get_object_or_404(Animal, id=animal_id, owner=self.request.user)
         serializer.save(animal=animal)
 
-<<<<<<< HEAD
 
 
 
@@ -593,7 +592,6 @@ class DailyFeedVsMilkRevenueView(APIView):
         except Exception as e:
             logger.error(f"Unexpected error: {str(e)}", exc_info=True)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-=======
 class LactationPeriodRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = LactationPeriod.objects.all()
     serializer_class = LactationPeriodSerializer
@@ -658,4 +656,3 @@ class DailyFeedVsMilkView(APIView):
         ]
 
         return Response(response_data, status=status.HTTP_200_OK)
->>>>>>> f2f527d5d3415f566814c37d2a0a96da1d26110b
