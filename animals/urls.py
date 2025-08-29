@@ -16,13 +16,10 @@ from .views import (
     MilkProductionCreateView,
     LactatingAnimalsListView,
     DailyMilkProductionSummaryView,
-<<<<<<< HEAD
     FinancialDataView,
-    DailyFeedVsMilkRevenueView
-=======
+    DailyFeedVsMilkRevenueView,
     DailyFeedVsMilkView,
-    LactationPeriodRetrieveUpdateDestroyView
->>>>>>> f2f527d5d3415f566814c37d2a0a96da1d26110b
+    LactationPeriodRetrieveUpdateDestroyView,
 )
 
 urlpatterns = [
@@ -47,10 +44,10 @@ urlpatterns = [
     path('production/milk/', ProductionDataListCreateView.as_view(), name='milk-production'),
     path('production/milk/lactating-animals/', LactatingAnimalsListView.as_view(), name='lactating-animals'),
     path('production/daily-summary/', DailyMilkProductionSummaryView.as_view(), name='daily-production-summary'),
-<<<<<<< HEAD
+
     path('api/financial-data/', FinancialDataView.as_view(), name='financial_data'),
     path('farms/<int:farm_id>/daily-feed-vs-milk/', DailyFeedVsMilkRevenueView.as_view(), name='daily_feed_vs_milk'),
-=======
+
     path('farms/<int:farm_id>/daily-feed-vs-milk/', DailyFeedVsMilkView.as_view(), name='daily-feed-vs-milk'),
->>>>>>> f2f527d5d3415f566814c37d2a0a96da1d26110b
+
 ]
