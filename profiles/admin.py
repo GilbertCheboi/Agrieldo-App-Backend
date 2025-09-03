@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils import timezone  # Import timezone
-from .models import Vet, Farmer, Lead, Staff, MechanizationAgent
+from .models import Vet, Farmer, Lead, Staff, MechanizationAgent, VetRequest
 
 class VetAdmin(admin.ModelAdmin):
     list_display = ('user', 'phone_number', 'is_available', 'last_active', 'latitude', 'longitude')
@@ -57,3 +57,37 @@ class MechanizationAgentAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'phone_number', 'location')
 
 admin.site.register(MechanizationAgent, MechanizationAgentAdmin)
+
+class VetRequestAdmin(admin.ModelAdmin):
+    list_display = ('id', 'farmer', 'vet', 'status', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('farmer__user__username', 'vet__user__username', 'message', 'signs')
+    ordering = ('-created_at',)
+    readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        ("Request Info", {
+            'fields': ('farmer', 'vet', 'message', 'signs', 'animal_image', 'status'),
+        }),
+        ("Timestamps", {
+            'fields': ('created_at', 'updated_at'),
+        }),
+    )
+
+# ✅ Correct VetRequestAdmin (registered properly)
+@admin.register(VetRequest)
+class VetRequestAdmin(admin.ModelAdmin):
+    list_display = ('id', 'farmer', 'vet', 'status', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('farmer__user__username', 'vet__user__username', 'message', 'signs')
+    ordering = ('-created_at',)
+    readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        ("Request Info", {
+            'fields': ('farmer', 'vet', 'message', 'signs', 'animal_image', 'status'),
+        }),
+        ("Timestamps", {
+            'fields': ('created_at', 'updated_at'),
+        }),
+    )

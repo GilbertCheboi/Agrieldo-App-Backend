@@ -221,3 +221,17 @@ class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+class DeleteAccountView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        username = user.username
+        user.delete()
+        return Response(
+            {"detail": f"User '{username}' and all associated data have been deleted."},
+            status=status.HTTP_200_OK,
+        )
+
