@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-_+dv1ec81!^iuyp&n&u77xs@qi*c37kttjf4j*-@0fhoc*)l55
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['207.154.253.97',"api.agrieldo.com",  "127.0.0.1", '192.168.100.4', '0.0.0.0:8000']
+ALLOWED_HOSTS = ['95.179.165.24',"api.agrieldo.com",  "127.0.0.1", '192.168.100.4', '0.0.0.0:8000']
 
 
 # Application definition
@@ -288,6 +288,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = "/var/www/agrieldo/static/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -295,7 +296,6 @@ STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 import os
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles/')
 
 MEDIA_URL = '/media/'
 

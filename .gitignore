@@ -1,2 +1,14 @@
-myprojectenv/__pycache__/
+# Ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore virtual environments
 venv/
+myprojectenv/
+
+# Ignore other common Python artifacts
+*.egg-info/
+dist/
+build/
