@@ -113,23 +113,41 @@ class MechanizationAgent(models.Model):
 
 
 class VetRequest(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("accepted", "Accepted"),
+        ("rejected", "Rejected"),
+        ("completed", "Completed"),
+    ]
+
     farmer = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="vet_requests"
     )
-    latitude = models.FloatField()
-    longitude = models.FloatField()
-    created_at = models.DateTimeField(auto_now_add=True)
+
+    vet = models.ForeignKey(
+        Vet,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_vet_requests"
+    )
+
+
+
+    signs = models.TextField(blank=True)  # symptoms (optional)
+    message = models.TextField(blank=True)  # extra details (optional)
+    animal_image = models.ImageField(upload_to="vet_requests/", null=True, blank=True)
+
     status = models.CharField(
         max_length=20,
-        choices=(
-            ("pending", "Pending"),
-            ("accepted", "Accepted"),
-            ("completed", "Completed"),
-        ),
+        choices=STATUS_CHOICES,
         default="pending"
     )
 
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
     def __str__(self):
-        return f"VetRequest by {self.farmer} at {self.created_at}"
+        return f"Request by {self.farmer} - {self.status} ({self.created_at:%Y-%m-%d})"

@@ -163,6 +163,14 @@ from rest_framework import viewsets, generics
 from rest_framework.decorators import api_view
 import math
 
+from accounts.models import User
+from .serializers import UserDetailSerializer
+from rest_framework.parsers import MultiPartParser, FormParser
+
+
+from rest_framework.decorators import api_view, permission_classes
+from django.shortcuts import get_object_or_404
+
 # Haversine formula to calculate distance in km
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371  # Earth radius in km
@@ -285,11 +293,21 @@ class AvailableVetsView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class AllVetsView(generics.ListAPIView):
+    """
+    List all vets, regardless of availability or location.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = Vet.objects.all()
+    serializer_class = VetSerializer
 
 class VetRequestCreateView(generics.CreateAPIView):
     serializer_class = VetRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)  # handle images
 
+    def perform_create(self, serializer):
+        serializer.save(farmer=self.request.user)
 
 class VetRequestListView(generics.ListAPIView):
     serializer_class = VetRequestSerializer
@@ -297,3 +315,59 @@ class VetRequestListView(generics.ListAPIView):
 
     def get_queryset(self):
         return VetRequest.objects.filter(farmer=self.request.user).order_by("-created_at")
+
+class MyVetRequestListView(generics.ListAPIView):
+    serializer_class = VetRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Get the Vet profile linked to the current user
+        vet_instance = getattr(self.request.user, 'vet_profile', None)
+        if not vet_instance:
+            return VetRequest.objects.none()  # No vet profile → empty queryset
+
+        # Return requests assigned to this vet
+        return VetRequest.objects.filter(vet=vet_instance).order_by('-created_at')
+
+
+
+class UserProfileView(generics.RetrieveAPIView):
+    serializer_class = UserDetailSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user  # no need for ID in URL
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def accept_vet_request(request, pk):
+    vet_request = get_object_or_404(VetRequest, pk=pk)
+    
+    # Only assigned vet can accept
+    if getattr(request.user, 'vet_profile', None) != vet_request.vet:
+        return Response({'detail': 'Not authorized.'}, status=status.HTTP_403_FORBIDDEN)
+
+    if vet_request.status != 'pending':
+        return Response({'detail': f'Request already {vet_request.status}.'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    vet_request.status = 'accepted'
+    vet_request.save()
+    return Response({'detail': 'Vet request accepted.'}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def decline_vet_request(request, pk):
+    vet_request = get_object_or_404(VetRequest, pk=pk)
+    
+    # Only assigned vet can decline
+    if getattr(request.user, 'vet_profile', None) != vet_request.vet:
+        return Response({'detail': 'Not authorized.'}, status=status.HTTP_403_FORBIDDEN)
+
+    if vet_request.status != 'pending':
+        return Response({'detail': f'Request already {vet_request.status}.'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    vet_request.status = 'rejected'
+    vet_request.save()
+    return Response({'detail': 'Vet request declined.'}, status=status.HTTP_200_OK)

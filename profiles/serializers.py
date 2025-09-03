@@ -1,5 +1,8 @@
 from rest_framework import serializers
 from .models import Farmer, Vet, Lead, Staff, MechanizationAgent, VetRequest
+from farms.models import Farm
+from animals.models import Animal
+from accounts.models import User
 
 class FarmerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -56,11 +59,33 @@ class MechanizationAgentSerializer(serializers.ModelSerializer):
 class VetRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = VetRequest
-        fields = ["id", "farmer", "latitude", "longitude", "status", "created_at"]
-        read_only_fields = ["id", "farmer", "status", "created_at"]
+        fields = [
+            "id",
+            "farmer",
+            "vet",
+            "signs",
+            "message",
+            "animal_image",
+            "status",
+            "created_at",
+        ]
+        read_only_fields = ["id", "farmer", "status", "created_at"]  # remove 'vet' from read-only
 
-    # Auto-assign farmer from request.user
-    def create(self, validated_data):
-        user = self.context["request"].user
-        validated_data["farmer"] = user
-        return super().create(validated_data)
+class AnimalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Animal
+        fields = ['id', 'tag', 'name', 'breed', 'dob', 'gender', 'assigned_worker']
+
+class FarmSerializer(serializers.ModelSerializer):
+    animals = AnimalSerializer(many=True, read_only=True)  # nested animals
+
+    class Meta:
+        model = Farm
+        fields = ['id', 'name', 'type', 'location', 'latitude', 'longitude', 'animals']
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    farms = FarmSerializer(source='owned_farms', many=True, read_only=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'farms']
