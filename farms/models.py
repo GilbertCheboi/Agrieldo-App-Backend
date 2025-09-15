@@ -35,6 +35,17 @@ class Farm(models.Model):
         help_text="Type of farm (Dairy, Sheep, Crop)"
     )
 
+    image = models.ImageField(
+        upload_to="farms/",
+        blank=True,
+        null=True,
+        help_text="Image of the farm"
+    )
+
+     # ✅ timestamps
+    created_at = models.DateTimeField(auto_now_add=True)  # set once when created
+    updated_at = models.DateTimeField(auto_now=True)      # updates on each save
+
     def __str__(self):
         return f"{self.name} (Owner: {self.owner.username}, Type: {self.type})"
 

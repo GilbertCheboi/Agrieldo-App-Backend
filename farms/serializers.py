@@ -27,17 +27,44 @@ class VetStaffSerializer(serializers.ModelSerializer):
         model = FarmVet
         fields = ["id", "user"]
 
+# class FarmSerializer(serializers.ModelSerializer):
+#     """Serializer for Farm model, ensuring proper staff serialization."""
+#     owner = serializers.StringRelatedField(read_only=True)  # Display owner's username
+#     farm_staff = FarmStaffSerializer(many=True, read_only=True)  # Use related_name from model
+#     vet_staff = VetStaffSerializer(many=True, read_only=True)    # Use related_name from model
+
+#     class Meta:
+#         model = Farm
+#         fields = [
+#             "id", "name", "owner", "farm_staff", "vet_staff", "location",
+#             "latitude", "longitude", "type"
+#         ]
+
+#     def create(self, validated_data):
+#         """Ensure the authenticated user is set as the farm owner."""
+#         request = self.context.get("request")
+#         if request and request.user.is_authenticated:
+#             validated_data["owner"] = request.user
+#         return super().create(validated_data)
+
+
+
 class FarmSerializer(serializers.ModelSerializer):
     """Serializer for Farm model, ensuring proper staff serialization."""
     owner = serializers.StringRelatedField(read_only=True)  # Display owner's username
-    farm_staff = FarmStaffSerializer(many=True, read_only=True)  # Use related_name from model
-    vet_staff = VetStaffSerializer(many=True, read_only=True)    # Use related_name from model
+    farm_staff = FarmStaffSerializer(many=True, read_only=True)
+    vet_staff = VetStaffSerializer(many=True, read_only=True)
 
+    # Make image writable and allow null/blank on input.
+    # use_url=True ensures a URL is returned (DRF will use request in context to build absolute URL).
+    image = serializers.ImageField(required=False, allow_null=True, use_url=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
     class Meta:
         model = Farm
         fields = [
             "id", "name", "owner", "farm_staff", "vet_staff", "location",
-            "latitude", "longitude", "type"
+            "latitude", "longitude", "type", "image", "created_at", "updated_at"
         ]
 
     def create(self, validated_data):
