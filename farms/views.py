@@ -10,6 +10,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from animals.models import Animal
 from animals.serializers import AnimalSerializer  # ✅ same here
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 
 User = get_user_model()
@@ -17,7 +18,8 @@ User = get_user_model()
 class FarmViewSet(viewsets.ModelViewSet):
     queryset = Farm.objects.all()
     serializer_class = FarmSerializer
-    permission_classes = [permissions.IsAuthenticated, IsFarmerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser, JSONParser)  # handle images and JSON
 
     def get_queryset(self):
         user = self.request.user
@@ -25,10 +27,10 @@ class FarmViewSet(viewsets.ModelViewSet):
         if user.is_superuser:
             return Farm.objects.all()
 
-        if user.user_type == 1:  # FARMER
+        if getattr(user, "user_type", None) == 1:  # FARMER
             return Farm.objects.filter(owner=user)
 
-        if user.user_type == 3:  # STAFF
+        if getattr(user, "user_type", None) == 3:  # STAFF
             return Farm.objects.filter(staff=user)
 
         return Farm.objects.none()
@@ -46,7 +48,13 @@ class FarmViewSet(viewsets.ModelViewSet):
         raise PermissionDenied("You do not have permission to access this farm.")
 
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        user = self.request.user
+        # allow only farmers and superusers to create farms
+        if user.is_superuser or getattr(user, "user_type", None) == 1:
+            serializer.save(owner=user)
+            return
+
+        raise PermissionDenied("Only farmers may create farms.")
 
 class FarmStaffListView(generics.ListAPIView):
     """
