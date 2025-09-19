@@ -164,7 +164,7 @@ from rest_framework.decorators import api_view
 import math
 
 from accounts.models import User
-from .serializers import UserDetailSerializer
+from .serializers import UserDetailSerializer, UserUpdateSerializer
 from rest_framework.parsers import MultiPartParser, FormParser
 
 
@@ -337,6 +337,13 @@ class UserProfileView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user  # no need for ID in URL
+
+class UserUpdateProfileView(generics.UpdateAPIView):
+    serializer_class = UserUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
 
 
 @api_view(['POST'])

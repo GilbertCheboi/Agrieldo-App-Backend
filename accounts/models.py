@@ -24,7 +24,11 @@ class User(AbstractUser):
     email = models.EmailField(unique=True, null=False, blank=False)  # Make email required and unique
     phone_number = models.CharField(max_length=15, null=True, blank=True)  # Remove `unique=True` temporarily
 
+
     fcm_token = models.CharField(max_length=255, blank=True, null=True, help_text="Firebase Cloud Messaging token")
+
+    profile_image = models.ImageField(upload_to='profile_images/', blank=True, null=True)
+    cover_image = models.ImageField(upload_to='cover_images/', blank=True, null=True)
 
     def __str__(self):
         return f"{self.username} ({self.get_user_type_display()})"

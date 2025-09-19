@@ -83,9 +83,41 @@ class FarmSerializer(serializers.ModelSerializer):
         model = Farm
         fields = ['id', 'name', 'type', 'location', 'latitude', 'longitude', 'animals']
 
+# class UserDetailSerializer(serializers.ModelSerializer):
+#     farms = FarmSerializer(source='owned_farms', many=True, read_only=True)
+
+#     class Meta:
+#         model = User
+#         fields = ['id', 'username', 'email', 'farms']
+
 class UserDetailSerializer(serializers.ModelSerializer):
     farms = FarmSerializer(source='owned_farms', many=True, read_only=True)
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'farms']
+        fields = [
+            'id',
+            'username',
+            'email',
+            'phone_number',
+            'user_type',
+            'profile_image',
+            'cover_image',
+            'farms',
+        ]
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "email",
+            "phone_number",
+            "profile_image",
+            "cover_image",
+        ]
+        extra_kwargs = {
+            "email": {"required": False},
+            "phone_number": {"required": False},
+            "profile_image": {"required": False},
+            "cover_image": {"required": False},
+        }
