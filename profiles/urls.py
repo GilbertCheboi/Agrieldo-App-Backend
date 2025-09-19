@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import FarmerProfileView, StaffProfileView, AvailableVetsView, AllVetsView, MyVetRequestListView, LeadViewSet, update_lead, VetRequestCreateView, VetRequestListView, UserProfileView, accept_vet_request, decline_vet_request
+from .views import FarmerProfileView, StaffProfileView, AvailableVetsView, AllVetsView, MyVetRequestListView, LeadViewSet, update_lead, VetRequestCreateView, VetRequestListView, UserProfileView, UserUpdateProfileView, accept_vet_request, decline_vet_request
 lead_list = LeadViewSet.as_view({'get': 'list', 'post': 'create'})
 lead_detail = LeadViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'})
 
@@ -7,6 +7,8 @@ urlpatterns = [
     path('farmer/profile/', FarmerProfileView.as_view(), name='farmer_profile'),
     path('staff/profile/', StaffProfileView.as_view(), name='staff_profile'),
     path('user/profile/', UserProfileView.as_view(), name='user-detail'),
+    path('user/profile/update/', UserUpdateProfileView.as_view(), name='user-update'), 
+
     path('leads/', lead_list, name='lead-list'),
     path('leads/<int:pk>/', lead_detail, name='lead-detail'),
     path('leads/update/<int:id>/', update_lead, name='update-lead'),  # Update the lead based on ID
