@@ -19,10 +19,11 @@ class QuotationListCreateView(generics.ListCreateAPIView):
     serializer_class = QuotationSerializer
     permission_classes = [IsAuthenticated]
 
-class QuotationDetailView(generics.RetrieveAPIView):
-    queryset = Quotations.objects.prefetch_related('quotation_items')  # Fetch related items
+class QuotationDetailView(generics.RetrieveUpdateDestroyAPIView):  # allow GET, PUT, PATCH, DELETE
+    queryset = Quotations.objects.prefetch_related('quotation_items')
     serializer_class = QuotationSerializer
     permission_classes = [IsAuthenticated]
+
 class ReceiptListCreateView(generics.ListCreateAPIView):
     queryset = Receipt.objects.prefetch_related('receipt_items')  # Fetch related items
     serializer_class = ReceiptSerializer

@@ -503,9 +503,6 @@ class FinancialDataView(APIView):
         return Response(serializer.data)
 
 
-
-
-
 class DailyFeedVsMilkRevenueView(APIView):
     def get(self, request, farm_id):
         logger.info(f"Request for farm_id: {farm_id}, params: {request.query_params}")
