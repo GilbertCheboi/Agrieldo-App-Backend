@@ -157,12 +157,12 @@ class DailyProductionTotalsView(APIView):
 
         return Response(response_data, status=status.HTTP_200_OK)
 
-class HealthRecordRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+class HealthRecordRetrieveUpdateView(generics.RetrieveUpdateDestroyAPIView):
     queryset = HealthRecord.objects.all()
     serializer_class = HealthRecordSerializer
-    permission_classes =  []  # Added IsAuthenticated
+    permission_classes = [permissions.IsAuthenticated]
     lookup_field = 'id'  # Matches /health-records/<id>/
-#IsAuthenticated, RoleBasedPermission
+
     def get_queryset(self):
         """
         Optionally filter queryset based on user permissions or animal ID.

@@ -45,7 +45,7 @@ class FarmViewSet(viewsets.ModelViewSet):
         if obj.owner == user or user in obj.staff.all():
             return obj
 
-        raise PermissionDenied("You do not have permission to access this farm.")
+        raise PermissionError("You do not have permission to access this farm.")
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -54,7 +54,7 @@ class FarmViewSet(viewsets.ModelViewSet):
             serializer.save(owner=user)
             return
 
-        raise PermissionDenied("Only farmers may create farms.")
+        raise PermissionError("Only farmers may create farms.")
 
 class FarmStaffListView(generics.ListAPIView):
     """
