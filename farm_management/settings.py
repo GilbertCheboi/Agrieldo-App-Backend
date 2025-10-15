@@ -179,7 +179,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://agrieldo.com",
     "http://192.168.100.4:3001",  # Local Django development server
     "http://192.168.100.4:8000",  # Local Django development server due to changes
-
+    "http://95.179.245.72:8000",
     "http://localhost:3000",     # React Native development server
     "http://localhost:3002", 
 
