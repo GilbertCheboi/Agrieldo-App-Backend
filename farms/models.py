@@ -45,6 +45,8 @@ class Farm(models.Model):
      # ✅ timestamps
     created_at = models.DateTimeField(auto_now_add=True)  # set once when created
     updated_at = models.DateTimeField(auto_now=True)      # updates on each save
+    google_sheet_url = models.URLField(blank=True, null=True)  # 👈 Link to Google Sheet
+
 
     def __str__(self):
         return f"{self.name} (Owner: {self.owner.username}, Type: {self.type})"

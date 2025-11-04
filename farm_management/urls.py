@@ -44,7 +44,8 @@ urlpatterns = [
     path('api/inventory/', include('inventory.urls')),  # Include calendar_app app URLs
     path('api/sheep_app/', include('sheep_app.urls')),  # Include calendar_app app URLs
     path('api/team/', include('team.urls')),  # Include calendar_app app URLs
-    path('api/subscriptions/', include('subscriptions.urls')),  
+    path('api/subscriptions/', include('subscriptions.urls')), 
+    path('api/AI_Chat/', include('AI_Chat.urls')),
 
 
 

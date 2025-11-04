@@ -3,7 +3,7 @@ from .models import Farm, FarmStaff, FarmVet
 
 @admin.register(Farm)
 class FarmAdmin(admin.ModelAdmin):
-    list_display = ("name", "owner", "get_staff_members", "get_vet_members", "location")
+    list_display = ("name","google_sheet_url", "owner", "get_staff_members", "get_vet_members", "location")
     search_fields = ("name", "owner__username", "location")
     list_filter = ("location",)
 

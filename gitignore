@@ -1,4 +1,6 @@
 env/
 *.pyc
 __pycache__/
+# credentials
+farm_management/credentials/*.json
 

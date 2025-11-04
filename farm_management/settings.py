@@ -16,13 +16,17 @@ from datetime import timedelta
 import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+from dotenv import load_dotenv
 
+# Load environment variables from .env
+load_dotenv(BASE_DIR / '.env')
 
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-_+dv1ec81!^iuyp&n&u77xs@qi*c37kttjf4j*-@0fhoc*)l55'
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -54,6 +58,7 @@ INSTALLED_APPS = [
     'billing',
     'messaging',
     'inventory',
+    'AI_Chat',
     'merchandise',
     'market',
     'Subscriber',
@@ -304,11 +309,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 import os
 
+MEDIA_ROOT = '/var/www/agrieldo/media'
 MEDIA_URL = '/media/'
 
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+GOOGLE_SHEETS_CREDENTIALS_FILE = BASE_DIR / 'google_service_account.json'
 
 # settings.py
 

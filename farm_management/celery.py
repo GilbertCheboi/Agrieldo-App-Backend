@@ -21,13 +21,19 @@ app.conf.beat_schedule = {
     # 🥛 Daily Milk Report - Every day at 10:00 PM
     'send-daily-milk-report-10pm': {
         'task': 'animals.tasks.send_milk_report_daily_task',
-        'schedule': crontab(minute=00, hour=22),  # 22:00 (10:00 PM daily)
+        'schedule': crontab(minute=0, hour=22),  # 22:00 (10:00 PM daily)
     },
 
     # 🐄 Animal Alerts Email - Every day at 9:00 PM
     'send-daily-animal-alerts-9pm': {
         'task': 'animals.tasks.send_animal_alerts_task',
-        'schedule': crontab(minute=41, hour=12),  # 21:00 (9:00 PM daily)
+        'schedule': crontab(minute=0, hour=21),  # 21:00 (9:00 PM daily)
+    },
+
+    # 🧾 Google Sheets Milk Sync - Every day at 6:00 AM
+    'sync-google-sheets-6am': {
+        'task': 'animals.tasks.sync_google_sheets',   # 👈 our new task
+        'schedule': crontab(minute=0, hour=6),      # runs daily at 6 AM
     },
 }
 

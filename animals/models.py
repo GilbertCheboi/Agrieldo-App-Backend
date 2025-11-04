@@ -1,4 +1,5 @@
-# animals/models.py
+from pgvector.django import VectorField
+import openai
 from django.db import models
 from datetime import timedelta
 from farms.models import Farm  # Import Farm from farms app
@@ -13,7 +14,6 @@ from django.conf import settings
 from decimal import Decimal
 import logging
 
-
 class Animal(models.Model):
     tag = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=50, blank=True, null=True)
@@ -21,37 +21,30 @@ class Animal(models.Model):
     dob = models.DateField()
     gender = models.CharField(max_length=10)
     farm = models.ForeignKey('farms.Farm', on_delete=models.CASCADE, related_name='animals')
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='animals_profile'
-    )
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='animals_profile')
     assigned_worker = models.CharField(max_length=100)
+    embedding = VectorField(dimensions=1536, null=True)
 
     def __str__(self):
         return self.tag
 
-    def category(self):
-        """
-        Categorizes the animal based on its age, reproductive status, and lactation status.
-        """
-        # Calculate age in months
-        age_months = (timezone.now().date() - self.dob).days / 30
-        print(f"Debug: {self.tag} - Age in months: {age_months}")
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)  # Save first to get an ID
+        if is_new:
+            self.embedding = generate_animal_embedding(self)
+            super().save(update_fields=["embedding"])
 
-        # Get latest lactation and reproductive event
+
+    # --------- Category & Status Methods ---------
+    def category(self):
+        age_months = (timezone.now().date() - self.dob).days / 30
+
         latest_lactation = self.lactation_periods.order_by('-last_calving_date').first() if self.lactation_periods.exists() else None
         latest_repro_event = self.reproductive_history.order_by('-date').first() if self.reproductive_history.exists() else None
 
-        # Debugging
-        print(f"Debug: {self.tag} - Latest Lactation: {latest_lactation}")
-        print(f"Debug: {self.tag} - Latest Reproductive Event: {latest_repro_event}")
-
-        # Males
         if self.gender == "Male":
             return "Bull"
-
-        # Young Female Stages
         if age_months < 3:
             return "Calf (0-3 months)"
         elif 3 <= age_months < 6:
@@ -63,11 +56,8 @@ class Animal(models.Model):
         elif 12 <= age_months < 15:
             return "Bulling (12-15 months)"
 
-        # Prioritize Lactation Status Over Pregnancy
         if latest_lactation and latest_lactation.is_milking:
             dim = latest_lactation.days_in_milk
-            print(f"Debug: {self.tag} - Milking: {latest_lactation.is_milking}, DIM: {dim}")
-
             if dim <= 100:
                 return "Early Lactating"
             elif 101 <= dim <= 200:
@@ -75,48 +65,61 @@ class Animal(models.Model):
             else:
                 return "Late Lactating"
 
-        # Pregnancy Status
         if latest_repro_event and self.is_pregnant:
             if latest_lactation and latest_lactation.expected_calving_date:
                 days_to_calving = (latest_lactation.expected_calving_date - timezone.now().date()).days
-                print(f"Debug: {self.tag} - Days to Calving: {days_to_calving}")
-
                 if 0 < days_to_calving <= 30:
-                    return "Steaming"  # Close to calving
+                    return "Steaming"
             return "In-Calf"
 
-        # Default to Heifer if no other category fits
         return "Heifer"
 
     @property
     def is_pregnant(self):
-        """
-        Determines if the animal is pregnant by checking its reproductive history.
-        """
         if not self.reproductive_history.exists():
             return False
         latest_event = self.reproductive_history.order_by('-date').first()
-        print(f"Debug: {self.tag} - Latest reproductive event: {latest_event.date} - {latest_event.event}")
-
         if latest_event.event in ["AI", "Natural Breeding"]:
-            calving_after = self.reproductive_history.filter(
-                event="Calving",
-                date__gt=latest_event.date
-            ).exists()
-            print(f"Debug: {self.tag} - Calving after last breeding: {calving_after}")
+            calving_after = self.reproductive_history.filter(event="Calving", date__gt=latest_event.date).exists()
             return not calving_after
         return False
 
     @property
     def is_sick(self):
-        """
-        Checks if the animal has been marked as sick within the last 30 days.
-        """
         recent_threshold = timezone.now().date() - timedelta(days=30)
-        return self.health_records.filter(
-            is_sick=True,
-            date__gte=recent_threshold
-        ).exists()
+        return self.health_records.filter(is_sick=True, date__gte=recent_threshold).exists()
+
+
+# --------- Embedding Function ---------
+from openai import OpenAI
+from django.conf import settings
+
+client = OpenAI(api_key=settings.OPENAI_API_KEY)
+
+def generate_animal_embedding(animal):
+    """Generate embedding for an animal instance."""
+    try:
+        # Build a meaningful text description of the animal
+        text = f"""
+        Animal Tag: {animal.tag}
+        Name: {animal.name or 'Unknown'}
+        Breed: {animal.breed}
+        Gender: {animal.gender}
+        Farm: {animal.farm.name if animal.farm else 'No Farm'}
+        Assigned Worker: {animal.assigned_worker}
+        """
+
+        # Create embedding using the new API
+        response = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=text.strip()
+        )
+
+        return response.data[0].embedding
+
+    except Exception as e:
+        print("Embedding generation failed:", e)
+        return None
 
 
 class AnimalImage(models.Model):
@@ -151,7 +154,7 @@ class ProductionData(models.Model):
         ('AFTERNOON', 'Afternoon'),
         ('EVENING', 'Evening'),
     )
-    
+
     animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='production_data')
     date = models.DateField()
     session = models.CharField(max_length=10, choices=SESSION_CHOICES, default='MORNING')
@@ -225,7 +228,7 @@ def update_financial_details_health(sender, instance, created, **kwargs):
         cost = Decimal(str(instance.cost))  # Convert float to Decimal
         financial.total_vet_cost += cost
         financial.total_cost += cost
-        financial.save()  
+        financial.save()
 @receiver(post_save, sender=ReproductiveHistory)
 def update_financial_details_reproduction(sender, instance, created, **kwargs):
     if created:
