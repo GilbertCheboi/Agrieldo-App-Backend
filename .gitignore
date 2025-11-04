@@ -12,3 +12,5 @@ myprojectenv/
 *.egg-info/
 dist/
 build/
+.env
+farm_management/credentials/*.json
