@@ -1,9 +1,33 @@
 from django.db import models
 from django.utils.timezone import now
 from django.conf import settings
+from farms.models import Farm  # ✅ Import Farm from your farms app
 
+
+class Store(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    farm = models.ForeignKey(Farm, on_delete=models.CASCADE, related_name='feed_stores')
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='feed_stores',  # 👈 changed from 'stores' to 'feed_stores'
+        null =True,
+        blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('name', 'farm')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.farm.name})"
 class Feed(models.Model):
-    name = models.CharField(max_length=255, null=True, blank=True)  # Removed unique=True
+    """
+    Represents a feed item (e.g., Hay, Silage, Dairy Meal) stored in a specific farm store.
+    """
+    name = models.CharField(max_length=255, null=True, blank=True)
     quantity_kg = models.FloatField(default=0.0, null=True, blank=True)
     price_per_kg = models.FloatField(default=0.0, help_text="Cost per kg")
     created_at = models.DateTimeField(default=now, null=True, blank=True)
@@ -14,9 +38,17 @@ class Feed(models.Model):
         null=True,
         blank=True
     )
+    store = models.ForeignKey(
+        Store,
+        on_delete=models.CASCADE,
+        related_name='feeds',
+        null=True,
+        blank=True,
+        help_text="Store where this feed is kept"
+    )
 
     class Meta:
-        unique_together = ('name', 'owner')
+        unique_together = ('name', 'owner', 'store')  # Same feed can exist in different stores
 
     def deduct_feed(self, quantity):
         """Deduct quantity from the feed if there is enough stock."""
@@ -41,8 +73,7 @@ class Feed(models.Model):
         return True
 
     def __str__(self):
-        return f"{self.name} - {self.quantity_kg} kg"
-
+        return f"{self.name} - {self.quantity_kg} kg ({self.store.name if self.store else 'No Store'})"
 
 
 class FeedingPlan(models.Model):
@@ -56,10 +87,11 @@ class FeedingPlan(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('owner', 'name')  # One plan name per user
+        unique_together = ('owner', 'name')
 
     def __str__(self):
         return self.name
+
 
 class FeedingPlanItem(models.Model):
     plan = models.ForeignKey(FeedingPlan, on_delete=models.CASCADE, related_name='items')
@@ -71,7 +103,8 @@ class FeedingPlanItem(models.Model):
     )
 
     class Meta:
-        unique_together = ('plan', 'feed')  # One feed type per plan
+        unique_together = ('plan', 'feed')
 
     def __str__(self):
         return f"{self.feed.name}: {self.quantity_per_animal} kg"
+

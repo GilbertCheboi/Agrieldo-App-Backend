@@ -208,17 +208,31 @@ def get_farms(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def get_farm_by_id(request, pk):
-    """
-    Return the farm with the given id that is owned by the authenticated user.
-    """
-    try:
-        farm = Farm.objects.get(pk=pk, owner=request.user)
-    except Farm.DoesNotExist:
-        return Response({"error": "Farm not found or unauthorized."}, status=status.HTTP_404_NOT_FOUND)
 
-    serializer = FarmSerializer(farm)
-    return Response(serializer.data)
+
+def get_farm_by_id(request, pk):
+    try:
+        farm = Farm.objects.get(pk=pk)
+    except Farm.DoesNotExist:
+        return Response({"error": "Farm not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    user = request.user
+
+    # ✅ Check permissions:
+    # - Farm owner
+    # - Or assigned vet (via FarmVet)
+    is_vet = farm.vet_staff.filter(user=user).exists()
+
+    if farm.owner == user or is_vet:
+        serializer = FarmSerializer(farm)
+        return Response(serializer.data)
+
+    return Response(
+        {"error": "You do not have permission to view this farm."},
+        status=status.HTTP_403_FORBIDDEN
+    )
+
+
 
 class FarmAnimalsView(APIView):
     """
@@ -244,3 +258,34 @@ class FarmAnimalsView(APIView):
         )
         serializer = AnimalSerializer(animals, many=True)
         return Response(serializer.data)
+
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_vet_farms(request):
+    """
+    List all farms assigned to the authenticated vet.
+    """
+    user = request.user
+
+    # Ensure user is a vet (user_type == 2 or similar if you have roles)
+    # If you don't have user_type for vet, just list farms from FarmVet
+    farms = Farm.objects.filter(vet_staff__user=user).distinct()
+
+    serializer = FarmSerializer(farms, many=True, context={"request": request})
+    return Response(serializer.data)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_staff_farms(request):
+    """
+    List all farms where the authenticated user is assigned as staff.
+    """
+    user = request.user
+
+    # Filter farms where this user is in the staff many-to-many field
+    farms = Farm.objects.filter(farm_staff__user=user).distinct()
+
+    serializer = FarmSerializer(farms, many=True, context={"request": request})
+    return Response(serializer.data)
+
