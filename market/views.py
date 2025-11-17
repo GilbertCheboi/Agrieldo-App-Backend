@@ -1,58 +1,80 @@
+from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
-from .models import Auction
-from .serializers import AuctionSerializer
-from animals.models import Animal
-from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from django.utils import timezone
-from rest_framework import status
+
+from .models import MarketListing
+from .serializers import (
+    MarketListingSerializer,
+    CreateListingSerializer
+)
+from animals.models import Animal
 
 
-@api_view(['POST'])
-def create_auction(request, animal_id):
-    try:
-        # Get the animal object
-        animal = Animal.objects.get(id=animal_id)
-    except Animal.DoesNotExist:
-        return Response({'error': 'Animal not found'}, status=404)
-
-    # Prepare the auction data, using animal.id as a foreign key reference
-    auction_data = {
-        'animal': animal.id,  # Pass only the animal's primary key (id), not the full object
-        'price': animal.price,  # Default price from the animal model (can be overridden)
-        'description': request.data.get('description', 'A healthy cow ready for sale!'),
-        'auction_end_date': request.data.get('auction_end_date', '2024-12-31'),
-        'location': request.data.get('location', 'Farm 7, Rural Area'),
-    }
-
-    # Create the serializer and validate the data
-    serializer = AuctionSerializer(data=auction_data)
-    if serializer.is_valid():
-        # Save the auction if the data is valid
-        serializer.save()
-        return Response(serializer.data, status=201)  # Return the newly created auction
-    else:
-        # Log validation errors for debugging
-        print("Validation errors:", serializer.errors)  # Log errors for debugging
-        return Response(serializer.errors, status=400)
-
-
-class AuctionListView(APIView):
+class CreateListingView(generics.CreateAPIView):
+    serializer_class = CreateListingSerializer
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        auctions = Auction.objects.filter(auction_end_date__gte=timezone.now().date())
+    def post(self, request, *args, **kwargs):
+        animal_id = request.data.get('animal')
 
-        serializer = AuctionSerializer(auctions, many=True)
-        return Response(serializer.data)
+        if not animal_id:
+            return Response({"error": "Animal ID is required"}, status=400)
 
-@api_view(['DELETE'])
-def remove_auction(request, pk):
-    try:
-        auction = Auction.objects.get(pk=pk)
-    except Auction.DoesNotExist:
-        return Response({'detail': 'Auction not found'}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            animal = Animal.objects.get(id=animal_id)
+        except Animal.DoesNotExist:
+            return Response({"error": "Animal not found"}, status=404)
 
-    auction.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
+        # Ensure only the owner can list
+        if animal.owner != request.user:
+            return Response({"error": "You are not the owner of this animal"}, status=403)
+
+        # If already listed
+        if hasattr(animal, 'market_listing'):
+            listing = animal.market_listing
+            listing.status = 'active'
+            listing.save()
+            return Response({"message": "Animal relisted successfully"}, status=200)
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        listing = serializer.save(
+            seller=request.user,
+            animal=animal,
+            status='active'
+        )
+
+        return Response(MarketListingSerializer(listing).data, status=201)
+
+
+class MarketListingListView(generics.ListAPIView):
+    queryset = MarketListing.objects.filter(status='active').order_by('-created_at')
+    serializer_class = MarketListingSerializer
+
+
+class MarketListingDetailView(generics.RetrieveAPIView):
+    queryset = MarketListing.objects.all()
+    serializer_class = MarketListingSerializer
+
+
+class ToggleListingStatusView(generics.UpdateAPIView):
+    queryset = MarketListing.objects.all()
+    serializer_class = MarketListingSerializer
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, *args, **kwargs):
+        listing = self.get_object()
+
+        if listing.seller != request.user:
+            return Response({"error": "Not allowed"}, status=403)
+
+        new_status = request.data.get("status")
+        if new_status not in ['active', 'hidden', 'sold']:
+            return Response({"error": "Invalid status"}, status=400)
+
+        listing.status = new_status
+        listing.save()
+
+        return Response(MarketListingSerializer(listing).data)
+

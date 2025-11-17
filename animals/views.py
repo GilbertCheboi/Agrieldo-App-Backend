@@ -503,92 +503,129 @@ class FinancialDataView(APIView):
         return Response(serializer.data)
 
 
+
+
+
 class DailyFeedVsMilkRevenueView(APIView):
+    """
+    Compare daily feed costs vs. milk revenue for a given farm.
+    Uses authenticated user's context and supports optional date filters.
+    """
+
     def get(self, request, farm_id):
-        logger.info(f"Request for farm_id: {farm_id}, params: {request.query_params}")
+        logger.info(f"🔍 Request for farm_id: {farm_id}, params: {request.query_params}")
+
         try:
-            # Get end_date, defaulting to today, and ensure it's a date object
-            end_date_param = request.query_params.get('end_date')
-            if end_date_param:
-                end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
-            else:
-                end_date = datetime.today().date()
+            # ✅ 1. Safely get the farm owned by the user
+            farm = Farm.objects.filter(id=farm_id, owner=request.user).first()
+            if not farm:
+                logger.warning(f"🚫 Farm {farm_id} not found or not owned by user {request.user}")
+                return Response(
+                    {"error": "Farm not found or unauthorized"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
-            # Get start_date, defaulting to 30 days before end_date
-            start_date_param = request.query_params.get('start_date')
-            if start_date_param:
-                start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
-            else:
-                start_date = end_date - timedelta(days=30)
+            # ✅ 2. Parse date range
+            end_date_str = request.query_params.get("end_date")
+            start_date_str = request.query_params.get("start_date")
 
-            logger.info(f"Parsed start_date: {start_date}, end_date: {end_date}")
-
-            # Get animals for the farm
-            logger.info(f"Fetching animals for farm_id: {farm_id}")
-            animals = Animal.objects.filter(farm_id=farm_id).values_list('id', flat=True)
-            if not animals.exists():
-                logger.warning(f"No animals found for farm_id: {farm_id}")
-                return Response({"detail": "No animals found for this farm."}, status=status.HTTP_404_NOT_FOUND)
-            logger.info(f"Found {len(animals)} animals")
-
-            # Aggregate feed costs by date
-            logger.info("Aggregating feed data")
-            feed_data = (
-                FeedManagement.objects
-                .filter(animal__in=animals, date__range=[start_date, end_date])
-                .values('date')
-                .annotate(total_feed_cost=Sum('total_cost'))
-                .order_by('date')
+            end_date = (
+                datetime.strptime(end_date_str, "%Y-%m-%d").date()
+                if end_date_str
+                else datetime.today().date()
             )
-            logger.info(f"Feed data: {list(feed_data)}")
+            start_date = (
+                datetime.strptime(start_date_str, "%Y-%m-%d").date()
+                if start_date_str
+                else end_date - timedelta(days=30)
+            )
 
-            # Aggregate milk revenue by date
-            logger.info("Aggregating milk data")
+            logger.info(f"📆 Date range: {start_date} → {end_date}")
+
+            # ✅ 3. Get animals for this farm
+            animals = Animal.objects.filter(farm=farm).values_list("id", flat=True)
+            if not animals.exists():
+                logger.warning(f"⚠️ No animals found for farm {farm.name} ({farm_id})")
+                return Response(
+                    {"detail": "No animals found for this farm."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            logger.info(f"🐄 Found {len(animals)} animals for farm {farm.name}")
+
+            # ✅ 4. Aggregate feed cost data
+            feed_data = (
+                FeedManagement.objects.filter(
+                    animal__in=animals, date__range=[start_date, end_date]
+                )
+                .values("date")
+                .annotate(total_feed_cost=Sum("total_cost"))
+                .order_by("date")
+            )
+
+            # ✅ 5. Aggregate milk data
             milk_data = (
-                ProductionData.objects
-                .filter(animal__in=animals, date__range=[start_date, end_date])
-                .values('date')
+                ProductionData.objects.filter(
+                    animal__in=animals, date__range=[start_date, end_date]
+                )
+                .values("date")
                 .annotate(
-                    total_milk_yield=Sum('milk_yield'),
-                    avg_price=Avg('milk_price_per_liter')
+                    total_milk_yield=Sum("milk_yield"),
+                    avg_price=Avg("milk_price_per_liter"),
                 )
                 .annotate(
                     total_revenue=ExpressionWrapper(
-                        Sum('milk_yield') * Avg('milk_price_per_liter'),
-                        output_field=DecimalField(max_digits=12, decimal_places=2)
+                        Sum("milk_yield") * Avg("milk_price_per_liter"),
+                        output_field=DecimalField(max_digits=12, decimal_places=2),
                     )
                 )
-                .order_by('date')
+                .order_by("date")
             )
-            logger.info(f"Milk data: {list(milk_data)}")
 
-            # Combine data into a single response
+            logger.info(f"📊 Aggregated {len(feed_data)} feed entries, {len(milk_data)} milk entries")
+
+            # ✅ 6. Combine feed + milk data by date
             result = {}
             current_date = start_date
             while current_date <= end_date:
-                date_str = current_date.strftime('%Y-%m-%d')
-                result[date_str] = {'date': date_str, 'feed_cost': 0.0, 'milk_revenue': 0.0}
+                date_str = current_date.strftime("%Y-%m-%d")
+                result[date_str] = {
+                    "date": date_str,
+                    "feed_cost": 0.0,
+                    "milk_revenue": 0.0,
+                }
                 current_date += timedelta(days=1)
 
             for entry in feed_data:
-                date_str = entry['date'].strftime('%Y-%m-%d')
-                result[date_str]['feed_cost'] = float(entry['total_feed_cost'])
+                date_str = entry["date"].strftime("%Y-%m-%d")
+                result[date_str]["feed_cost"] = float(entry["total_feed_cost"] or 0)
 
             for entry in milk_data:
-                date_str = entry['date'].strftime('%Y-%m-%d')
-                result[date_str]['milk_revenue'] = float(entry['total_revenue'])
+                date_str = entry["date"].strftime("%Y-%m-%d")
+                result[date_str]["milk_revenue"] = float(entry["total_revenue"] or 0)
 
+            # ✅ 7. Serialize and respond
             response_data = list(result.values())
             serializer = DailyFeedVsMilkRevenueSerializer(response_data, many=True)
-            logger.info("Data serialized successfully")
+
+            logger.info(f"✅ Data serialized successfully for farm {farm.name}")
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         except ValueError as ve:
-            logger.error(f"ValueError: {str(ve)}")
-            return Response({'error': f"Invalid date format: {str(ve)}"}, status=status.HTTP_400_BAD_REQUEST)
+            logger.error(f"❌ Date format error: {ve}")
+            return Response(
+                {"error": f"Invalid date format. Expected YYYY-MM-DD ({ve})"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         except Exception as e:
-            logger.error(f"Unexpected error: {str(e)}", exc_info=True)
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception(f"💥 Unexpected error for farm_id {farm_id}: {e}")
+            return Response(
+                {"error": "Internal server error", "details": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+
 class LactationPeriodRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = LactationPeriod.objects.all()
     serializer_class = LactationPeriodSerializer

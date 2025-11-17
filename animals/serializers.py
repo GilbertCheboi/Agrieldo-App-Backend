@@ -5,6 +5,7 @@ from .models import (
     FeedManagement, FinancialDetails, LactationPeriod, LifetimeStats
 )
 from farms.models import Farm
+from accounts.models import User  # or correct user model import from your project
 
 class FarmSerializer(serializers.ModelSerializer):
     class Meta:
@@ -87,13 +88,20 @@ class LifetimeStatsSerializer(serializers.ModelSerializer):
         fields = ['total_milk', 'avg_yield', 'calves']
 
 
+class AnimalOwnerPublicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User   # import your User model
+        fields = ['id', 'username', 'phone_number']
+
+
 class AnimalSerializer(serializers.ModelSerializer):
-     # Automatically assign the authenticated user as owner
+    # Auto owner when creating
     owner = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
-    # Allow images to be writable
-    images = AnimalImageSerializer(many=True, required=False)
+    # Read-only nested owner details
+    owner_details = AnimalOwnerPublicSerializer(source='owner', read_only=True)
 
+    images = AnimalImageSerializer(many=True, required=False)
     health_records = HealthRecordSerializer(many=True, read_only=True)
     production_data = ProductionDataSerializer(many=True, read_only=True)
     reproductive_history = ReproductiveHistorySerializer(many=True, read_only=True)
@@ -101,19 +109,21 @@ class AnimalSerializer(serializers.ModelSerializer):
     financial_details = FinancialDetailsSerializer(read_only=True)
     lactation_periods = LactationPeriodSerializer(many=True, read_only=True)
     lifetime_stats = LifetimeStatsSerializer(read_only=True)
-    # farm = FarmSerializer(read_only=True)
+
     farm = serializers.PrimaryKeyRelatedField(queryset=Farm.objects.all())
     category = serializers.SerializerMethodField()
     is_pregnant = serializers.SerializerMethodField()
     latest_milk_yield = serializers.SerializerMethodField()
+
     class Meta:
         model = Animal
         fields = [
-            'tag','id', 'name', 'breed', 'dob', 'gender', 'farm', 'owner',
-             'images', 'health_records', 'production_data',
+            'tag','id', 'name', 'breed', 'dob', 'gender', 'farm',
+            'owner', 'owner_details',   # 👈 added owner_details
+            'images', 'health_records', 'production_data',
             'reproductive_history', 'feed_management', 'financial_details',
-            'lactation_periods', 'lifetime_stats', 'category', 'is_pregnant',
-            'latest_milk_yield'
+            'lactation_periods', 'lifetime_stats',
+            'category', 'is_pregnant', 'latest_milk_yield'
         ]
 
     def get_category(self, obj):

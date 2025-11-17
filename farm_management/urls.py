@@ -46,6 +46,8 @@ urlpatterns = [
     path('api/team/', include('team.urls')),  # Include calendar_app app URLs
     path('api/subscriptions/', include('subscriptions.urls')), 
     path('api/AI_Chat/', include('AI_Chat.urls')),
+    path('api/orders/', include('orders.urls')),
+
 
 
 

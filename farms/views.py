@@ -197,13 +197,15 @@ class RemoveFarmVetView(APIView):
         vet.delete()
         return Response({"message": "Vet staff member removed successfully."}, status=status.HTTP_200_OK)
 
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_farms(request):
-    """Return only farms owned by the authenticated user."""
-    farms = Farm.objects.filter(owner=request.user)  # Assuming `owner` is the farm owner field
-    serializer = FarmSerializer(farms, many=True)
+    """
+    ✅ Return all farms owned by the authenticated user (farm owner).
+    Includes feed_stores for each farm.
+    """
+    farms = Farm.objects.filter(owner=request.user)
+    serializer = FarmSerializer(farms, many=True, context={"request": request})
     return Response(serializer.data)
 
 @api_view(["GET"])

@@ -1,14 +1,22 @@
 from django.urls import path
-from .views import create_auction, AuctionListView, remove_auction
+from .views import (
+    CreateListingView,
+    MarketListingListView,
+    MarketListingDetailView,
+    ToggleListingStatusView
+)
 
 urlpatterns = [
-    # Endpoint for creating an auction for a specific animal
-    path('create_auction/<int:animal_id>/', create_auction, name='create_auction'),
+    # POST should come here
+    path('listings/', CreateListingView.as_view(), name='create-listing'),
 
-    # Endpoint for listing active auctions
-    path('auctions/', AuctionListView.as_view(), name='auction_list'),
+    # GET list
+    path('listings/all/', MarketListingListView.as_view(), name='market-listings'),
 
-    # Endpoint for removing an auction by ID
-    path('remove_auction/<int:pk>/', remove_auction, name='remove_auction'),
+    # GET detail
+    path('listings/<int:pk>/', MarketListingDetailView.as_view(), name='listing-detail'),
+
+    # PATCH toggle status
+    path('listings/<int:pk>/toggle/', ToggleListingStatusView.as_view(), name='toggle-listing'),
 ]
 

@@ -1,15 +1,45 @@
 from django.db import models
-from animals.models import Animal
+from django.conf import settings
+from animals.models import Animal  # make sure Animal model exists
 
-class Auction(models.Model):
-    animal = models.OneToOneField(Animal, on_delete=models.CASCADE, null=True, blank=True)
-    listed_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+def listing_image_upload_path(instance, filename):
+    return f"market/listings/animal_{instance.animal.id}/{filename}"
 
-    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    description = models.TextField()
-    auction_end_date = models.DateField(null=True, blank=True)
-    location = models.CharField(max_length=255, null=True, blank=True)
+
+class MarketListing(models.Model):
+    STATUS_CHOICES = (
+        ('active', 'Active'),
+        ('sold', 'Sold'),
+        ('hidden', 'Hidden'),
+    )
+
+    animal = models.OneToOneField(
+        Animal,
+        on_delete=models.CASCADE,
+        related_name="market_listing"
+    )
+    seller = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="market_sales"
+    )
+    price = models.DecimalField(max_digits=12, decimal_places=2)
+    description = models.TextField(blank=True, null=True)
+
+    image = models.ImageField(
+        upload_to=listing_image_upload_path,
+        blank=True,
+        null=True
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='active'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Auction for {self.animal.name} ({self.animal.species})"
+        return f"{self.animal.name} - {self.status}"
 

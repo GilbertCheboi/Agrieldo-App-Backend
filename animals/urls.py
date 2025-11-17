@@ -50,8 +50,6 @@ urlpatterns = [
     
     # path('farms/<int:farm_id>/daily-feed-vs-milk/', DailyFeedVsMilkRevenueView.as_view(), name='daily_feed_vs_milk'),
 
-    path('farms/<int:farm_id>/daily-feed-vs-milk/', DailyFeedVsMilkView.as_view(), name='daily-feed-vs-milk'),
     path('api/financial-data/', FinancialDataView.as_view(), name='financial_data'),
     path('farms/<int:farm_id>/daily-feed-vs-milk/', DailyFeedVsMilkRevenueView.as_view(), name='daily_feed_vs_milk'),
-    path('farms/<int:farm_id>/daily-feed-vs-milk/', DailyFeedVsMilkView.as_view(), name='daily-feed-vs-milk'),
 ]

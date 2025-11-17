@@ -29,7 +29,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
     "95.179.165.24",
@@ -71,8 +71,7 @@ INSTALLED_APPS = [
     'farms',
     'machinery',
     'contracts',
-    'subscriptions',
-    
+    'subscriptions', 
     'finances',
     'feed',
     'profiles',
@@ -84,7 +83,7 @@ INSTALLED_APPS = [
     'rest_framework_gis',
     'channels',
     'django_celery_beat',  # Add this to your installed apps
-
+    'orders',
     'fcm_django',
     'django_extensions',
     'rest_framework',
@@ -113,9 +112,12 @@ CSRF_COOKIE_SECURE = False  # Set to True for production with HTTPS
 CSRF_COOKIE_HTTPONLY = False
 
 # Celcom SMS credentials
-SMS_API_KEY = "7e773ee47f54a394a6613e1e276739ed"
-SMS_PARTNER_ID = "685"
-SMS_SHORTCODE = "AGRIELDO"
+SMS_API_KEY = os.getenv("SMS_API_KEY")
+
+SMS_PARTNER_ID = os.getenv("SMS_PARTNER_ID ")
+
+SMS_SHORTCODE = os.getenv("SMS_SHORTCODE")
+
 
 
 ROOT_URLCONF = 'farm_management.urls'
@@ -163,14 +165,16 @@ FCM_DJANGO_SETTINGS = {
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+import os
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'myproject',
-        'USER': 'myprojectuser',
-        'PASSWORD': 'password',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.environ['DB_NAME'],
+        'USER': os.environ['DB_USER'],
+        'PASSWORD': os.environ['DB_PASSWORD'],
+        'HOST': os.environ['DB_HOST'],
+        'PORT': os.environ['DB_PORT'],
     }
 }
 
@@ -275,13 +279,13 @@ SIMPLE_JWT = {
 
 
 # settings.py
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.zoho.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'info@agrieldo.com'
-EMAIL_HOST_PASSWORD = 'agrieldo@1524'
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER  # The default sender for emails
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_PORT = os.getenv("EMAIL_PORT")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
@@ -317,4 +321,18 @@ MEDIA_URL = '/media/'
 GOOGLE_SHEETS_CREDENTIALS_FILE = BASE_DIR / 'google_service_account.json'
 
 # settings.py
+AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
+AZURE_OPENAI_KEY = os.getenv("AZURE_OPENAI_KEY")
+AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt4o-agrieldo")
+
+
+
+MPESA_CONSUMER_KEY = os.getenv("MPESA_CONSUMER_KEY")
+MPESA_CONSUMER_SECRET = os.getenv("MPESA_CONSUMER_SECRET")
+MPESA_SHORTCODE = os.getenv("MPESA_SHORTCODE")
+MPESA_PASSKEY = os.getenv("MPESA_PASSKEY")
+MPESA_CALLBACK_URL = os.getenv("MPESA_CALLBACK_URL")
+
+
 

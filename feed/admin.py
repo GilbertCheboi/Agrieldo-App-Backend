@@ -1,6 +1,38 @@
 # feed/admin.py
 from django.contrib import admin
-from .models import Feed, FeedingPlan, FeedingPlanItem
+from .models import Feed, FeedingPlan, FeedingPlanItem, Store
+
+
+
+@admin.register(Store)
+class StoreAdmin(admin.ModelAdmin):
+    list_display = ('name', 'farm', 'owner', 'created_at')
+    list_filter = ('farm', 'owner', 'created_at')
+    search_fields = ('name', 'farm__name', 'owner__username')
+    ordering = ('-created_at',)
+    date_hierarchy = 'created_at'
+
+    fieldsets = (
+        ('Store Information', {
+            'fields': ('name', 'description')
+        }),
+        ('Associations', {
+            'fields': ('farm', 'owner')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at',),
+            'classes': ('collapse',),
+        }),
+    )
+
+    readonly_fields = ('created_at',)
+
+    def get_queryset(self, request):
+        """Optimize query performance"""
+        qs = super().get_queryset(request)
+        return qs.select_related('farm', 'owner')
+
+
 
 @admin.register(Feed)
 class FeedAdmin(admin.ModelAdmin):
